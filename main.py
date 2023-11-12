@@ -1,17 +1,19 @@
 import time
 import board
+import gpiod
 import numpy as np
 import digitalio
 import multiprocessing as mp
 from multiprocessing import shared_memory
+import threading
+import socket
 import rhd2164_driver
 from adafruit_bus_device.spi_device import SPIDevice
 from micropython import const
 from sklearn import preprocessing
 import tpu_inference as infer
 
-
-
+# SPI clock frequency in Hz
 _SPI_FREQ_HZ         = const(4000000)
 _CMD_TO_CMD_DELAY_MS = const(1000)
 
@@ -23,6 +25,15 @@ _ADC_SAMPLING_TIMER_CLOCK_HZ = const(1000000)
 _ADC_SAMPLING_TIMER_PERIOD = const(999) #(999) -> Fs = 1 kHz
 _TIME_LENGTH = const(25)
 _VOTE_LENGTH = const(100)
+
+def initialize_button():
+    chip = gpiod.chip("0", gpiod.chip.OPEN_BY_NUMBER)
+    button = chip.get_line(2)
+    config = gpiod.line_request()
+    config.request_type = gpiod.line_request.DIRECTION_INPUT
+    button.request(config)
+    #button.get_value()
+    return button
 
 def create_shared_memory(time_length):
     mutex_tmp = np.array([0,0], dtype=np.int8)
@@ -58,16 +69,15 @@ def sample_adc(samplin_rate, window_length, mutex_shr_name, buff_1_shr_name, buf
     sampling_index = 0
     old_time = 0
     i = 0
-    while (i<10000000):
-        i += 1
+    while True:
         current_time = time.time()
         time_diff = current_time-old_time
         if time_diff > samplin_rate:
             current_buffer = mutex[0]
             if (current_buffer == 0):
-                buff1[sampling_index,:] = 1
+                buff1[sampling_index,:] = np.random.rand(64)
             elif (current_buffer == 1):
-                buff2[sampling_index,:] = 2
+                buff2[sampling_index,:] = np.random.rand(64)
 
             if (sampling_index == window_length-1):
                 lock.acquire()
@@ -79,9 +89,11 @@ def sample_adc(samplin_rate, window_length, mutex_shr_name, buff_1_shr_name, buf
             old_time = current_time
     print("%s, Exiting"%(name))
 
-def execute_neural_network(model_path, vote_length, window_length, mutex_shr_name, buff_1_shr_name, buff_2_shr_name):
-    interpreter = infer.make_interpreter(model_path)
-    interpreter.allocate_tensors()
+def main_process(model_path, vote_length, window_length, mutex_shr_name, buff_1_shr_name, buff_2_shr_name):
+    print("Configuring GPIOs /n")
+    button = initialize_button()
+
+    # Create shared memory
     existing_mutex_shm = shared_memory.SharedMemory(name=mutex_shr_name)
     existing_buff1_shm = shared_memory.SharedMemory(name=buff_1_shr_name)
     existing_buff2_shm = shared_memory.SharedMemory(name=buff_2_shr_name)
@@ -90,49 +102,97 @@ def execute_neural_network(model_path, vote_length, window_length, mutex_shr_nam
     buff1 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff1_shm.buf)
     buff2 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff2_shm.buf)
 
+    # Create server
+    BUFF_SIZE = 1024
+    # Get the ip address of the server
+    with open("/home/mendel/ip_addr.txt", "r") as f:
+        ip_addresses = f.read().rstrip('\n')
+    # Get the ip address after the server string by removing the server string and get from the first number
+    receiver_ip = ip_addresses[ip_addresses.find("server"):].split(" ")[-1]
+    # Get the substring after the first number
+
+    port = 6677
+    sender = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sender.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF,BUFF_SIZE)
+
+    # Create interpreter
+    interpreter = infer.make_interpreter(model_path)
+    interpreter.allocate_tensors()
+
     nb_votes = int(np.floor(vote_length/window_length))
-    votes_arr = np.zeros(nb_votes, dtype=np.uint8)    
+    votes_arr = np.zeros(nb_votes, dtype=np.uint8)
     curr_vote = 0
-    i = 0
-    while (i<10000000):
-        i += 1
-        inference_ready = mutex[1]
-        if inference_ready == 1:
+    training = 0
+    state = 0
+    first_run = True
+    training_done = False
+
+    label = 0
+    nb_data_send = 0
+
+    while True:
+        value = button.get_value()
+        data_ready = mutex[1]
+
+        if value == 0:
+            if training != 1:
+                print("Button pressed")
+            training = 1
+
+        if data_ready == 1:
             current_buffer = (mutex[0]-1)%2
             if current_buffer == 0:
                 data = np.mean(np.absolute(buff1 - np.mean(buff1,axis=0)),axis=0)
             elif current_buffer == 1:
                 data = np.mean(np.absolute(buff2 - np.mean(buff2,axis=0)),axis=0)
             scaled_data = np.uint8(preprocessing.minmax_scale(data)*255).reshape(4,16,1)
+            lock.acquire()
+            mutex[1] = 0
+            lock.release()
+
+        if training == 1:
+            curr_time = time.time()
+            if state == 0:
+                if data_ready == 1:
+                    sender.sendto(str(label).encode("utf-8"), (receiver_ip, port))
+                    #send numpy array
+                    curr_time = time.time()
+                    sender.sendto(scaled_data.tobytes(), (receiver_ip, port))
+                    print("Time taken to send data : %f"%(time.time()-curr_time))
+                    nb_data_send += 1
+                if nb_data_send == 20:
+                    label += 1
+                    nb_data_send = 0
+
+        elif data_ready == 1 and training == 0:
             vote = infer.make_inference(interpreter, scaled_data)
             votes_arr[curr_vote] = vote
             if (curr_vote+1 == nb_votes):
                 majority_vote = np.argmax(np.bincount(votes_arr))
                 print("Majority vote : %d"%(majority_vote))
             curr_vote = (curr_vote+1)%nb_votes
-            
-            lock.acquire()
-            mutex[1] = 0
-            lock.release()
+
 
 def main():
     model_path = "model/average_model_v1_edgetpu.tflite"
-    print("Configuring SPI master /n")
     #print(board.board_id)
     #spi = board.SPI()
     #cs = digitalio.DigitalInOut(board.D5)
 
     mutex_shm, buff_1_shm, buff_2_shm, mutex, data_buffer_1, data_buffer_2 = create_shared_memory(_TIME_LENGTH)
     adc_sampling = mp.Process(name="adc_sampling", target=sample_adc, args=(0.001,_TIME_LENGTH,mutex_shm.name, buff_1_shm.name, buff_2_shm.name,))
-    exec_inference = mp.Process(name="exec_inference", target=execute_neural_network, args=(model_path, _VOTE_LENGTH, _TIME_LENGTH, mutex_shm.name, buff_1_shm.name, buff_2_shm.name,))
+    main_loop = mp.Process(name="main_process", target=main_process, args=(model_path, _VOTE_LENGTH, _TIME_LENGTH, mutex_shm.name, buff_1_shm.name, buff_2_shm.name,))
     adc_sampling.start()
-    exec_inference.start()
+    main_loop.start()
     adc_sampling.join()
-    exec_inference.join()
-    print("done")
+    main_loop.join()
 
-    print(data_buffer_1)
+    print("done")
     #rhd2164 = rhd2164_driver.RHD2164(spi,cs, )
+
+    main_loop.close()
+    adc_sampling.close()
+
     mutex_shm.close()
     buff_1_shm.close()
     buff_2_shm.close()
@@ -140,5 +200,5 @@ def main():
     mutex_shm.unlink()
     buff_1_shm.unlink()
     buff_2_shm.unlink()
-    
+
 main()
