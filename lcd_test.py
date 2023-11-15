@@ -294,7 +294,7 @@ class I2cLcd(LcdApi):
 def test_main():
     """Test function for verifying basic functionality."""
     print("Running test_main")
-    i2c = busio.I2C(board.SCL, board.SDA)
+    i2c = busio.I2C(board.I2C1_SCL, board.I2C1_SDA)
 
     # circuitpython seems to require locking the i2c bus
     while i2c.try_lock():
