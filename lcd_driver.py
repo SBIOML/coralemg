@@ -1,7 +1,8 @@
 import time
-from time import sleep, monotonic
 import busio
 import board
+
+# Code from https://github.com/dhylands/python_lcd
 
 # The PCF8574 has a jumper selectable address: 0x20 - 0x27
 DEFAULT_I2C_ADDR = 0x27
@@ -14,7 +15,7 @@ MASK_E = 0x04
 SHIFT_BACKLIGHT = 3
 SHIFT_DATA = 4
 
-class LcdApi:
+class LCD_API:
     """Implements the API for talking with HD44780 compatible character LCDs.
     This class only knows what commands to send to the LCD, and not how to get
     them to the LCD.
@@ -223,24 +224,24 @@ class LcdApi:
         """Sleep for some time (given in microseconds)."""
         time.sleep_us(usecs)  # NOTE this is not part of Standard Python library, specific hal layers will need to override this
 
-class I2cLcd(LcdApi):
+class I2C_LCD(LCD_API):
     """Implements a HD44780 character LCD connected via PCF8574 on I2C."""
     def __init__(self, i2c, i2c_addr, num_lines, num_columns):
         self.i2c = i2c
         self.i2c_addr = i2c_addr
         self.i2c.writeto(self.i2c_addr, bytearray([0]))
-        sleep(0.02)   # Allow LCD time to powerup
+        time.sleep(0.02)   # Allow LCD time to powerup
 		# Send reset 3 times
         self.hal_write_init_nibble(self.LCD_FUNCTION_RESET)
-        sleep(0.005)    # need to delay at least 4.1 msec
+        time.sleep(0.005)    # need to delay at least 4.1 msec
         self.hal_write_init_nibble(self.LCD_FUNCTION_RESET)
-        sleep(0.001)
+        time.sleep(0.001)
         self.hal_write_init_nibble(self.LCD_FUNCTION_RESET)
-        sleep(0.001)
+        time.sleep(0.001)
         # Put LCD into 4 bit mode
         self.hal_write_init_nibble(self.LCD_FUNCTION)
-        sleep(0.001)
-        LcdApi.__init__(self, num_lines, num_columns)
+        time.sleep(0.001)
+        LCD_API.__init__(self, num_lines, num_columns)
         cmd = self.LCD_FUNCTION
         if num_lines > 1:
             cmd |= self.LCD_FUNCTION_2LINES
@@ -276,7 +277,7 @@ class I2cLcd(LcdApi):
         self.i2c.writeto(self.i2c_addr, bytearray([byte]))
         if cmd <= 3:
             # The home and clear commands require a worst case delay of 4.1 msec
-            sleep(0.005)
+            time.sleep(0.005)
 
     def hal_write_data(self, data):
         """Write data to the LCD."""
@@ -289,7 +290,7 @@ class I2cLcd(LcdApi):
 
     def hal_sleep_us(self, usecs):
         """Sleep for some time (given in microseconds)."""
-        sleep(float(usecs)/1e6)
+        time.sleep(float(usecs)/1e6)
 
 def test_main():
     """Test function for verifying basic functionality."""
@@ -301,7 +302,7 @@ def test_main():
         pass
 
     # 2 lines, 16 characters per line
-    lcd = I2cLcd(i2c, DEFAULT_I2C_ADDR, 2, 16)
+    lcd = I2C_LCD(i2c, DEFAULT_I2C_ADDR, 2, 16)
 
     # smiley faces as custom characters
     happy = bytearray([0x00,0x0A,0x00,0x04,0x00,0x11,0x0E,0x00])
@@ -320,22 +321,22 @@ def test_main():
     lcd.custom_char(6, tongue)
 
     lcd.putstr("It works!\nSecond line")
-    sleep(3)
+    time.sleep(3)
     lcd.clear()
     lcd.putstr("Custom chars:\n")
     for i in range(7):
         lcd.putchar(" ")
         lcd.putchar(chr(i))
-        sleep(1)
+        time.sleep(1)
 
-    sleep(3)
+    time.sleep(3)
     lcd.clear()
     count = 0
 
     while True:
         lcd.move_to(0, 0)
-        lcd.putstr("%7d" % monotonic())
-        sleep(1)
+        lcd.putstr("%7d" % time.monotonic())
+        time.sleep(1)
         count += 1
         if count % 10 == 3:
             print("Turning backlight off")
