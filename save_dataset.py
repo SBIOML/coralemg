@@ -12,7 +12,7 @@ def getData_EMG(user_id, session_nb, arm_used = "right", differential=False):
     nb_repetition = 10
     nb_pts = 5000
     # start_path = 'C:/Users/felix/OneDrive/Documents/SCHOOL/ETE2022/Projet/Dataset/user_001/session_000/'  # ordi perso
-    start_path = '/home/etienne/Documents/maitrise/recherche/GSPEMG/ULEMG/%s/session_%s/'%(user_id, session_nb)  # ordi UL
+    start_path = '/home/etienne/Documents/Universite/maitrise/recherche/GSPEMG_OLD/ULEMG/%s/session_%s/'%(user_id, session_nb)  # ordi UL
     data_array = np.zeros((nb_gesture, nb_repetition, 64, nb_pts), dtype=int)
     for gest in range(nb_gesture):
         for rep in range(nb_repetition):
