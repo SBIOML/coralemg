@@ -1,7 +1,7 @@
 import numpy as np
 from scipy import signal
 import save_dataset as sd
-import compression as compress
+import quantization as compress
 
 
 def filter_utility(data, fs=1000, Q=30, notch_freq=60):
@@ -23,13 +23,15 @@ def extract_with_labels(data_array):
     for label in range(labels):
         for experiment in range(nb_exp):
             X[
-                nb_sample * (label * nb_exp + experiment) : 
-                nb_sample * (label * nb_exp + experiment + 1),
+                nb_sample
+                * (label * nb_exp + experiment) : nb_sample
+                * (label * nb_exp + experiment + 1),
                 :,
             ] = data_array[label, experiment, :, :]
             y[
-                nb_sample * (label * nb_exp + experiment) : 
-                nb_sample * (label * nb_exp + experiment + 1)
+                nb_sample
+                * (label * nb_exp + experiment) : nb_sample
+                * (label * nb_exp + experiment + 1)
             ] = label
     return X, y
 
@@ -87,12 +89,19 @@ def roll_data(data_array, rolled_range, v_dim=4, h_dim=16):
         output_data[i * nb_sample : (i + 1) * nb_sample, :] = tmp_data
     return output_data
 
-def _roll_array(data, roll, v_dim=4, h_dim=16, ):
+
+def _roll_array(
+    data,
+    roll,
+    v_dim=4,
+    h_dim=16,
+):
     tmp_data = np.array(data)
-    tmp_data = np.reshape(tmp_data,(-1, v_dim, h_dim))
+    tmp_data = np.reshape(tmp_data, (-1, v_dim, h_dim))
     tmp_data = np.roll(tmp_data, roll, axis=2)
-    tmp_data = np.reshape(tmp_data,(-1, v_dim*h_dim))
-    return tmp_data 
+    tmp_data = np.reshape(tmp_data, (-1, v_dim * h_dim))
+    return tmp_data
+
 
 def compress_data(data, method="minmax"):
     """
@@ -118,6 +127,7 @@ def compress_data(data, method="minmax"):
     else:
         raise ValueError("Invalid compression method")
 
+
 if __name__ == "__main__":
     # generate sinus of 60 hz
     dataset_path = "dataset/emager/"
@@ -132,20 +142,29 @@ if __name__ == "__main__":
     # roll the data
     rolled = roll_data(averages, 2)
     print(np.shape(rolled))
-    X,y = extract_with_labels(data_array)
+    X, y = extract_with_labels(data_array)
 
     y = np.array(y, dtype=np.uint8)
     print(np.shape(X))
     _TIME_LENGTH = 25
     _VOTE_LENGTH = 150
-    nb_votes = int(np.floor(_VOTE_LENGTH/_TIME_LENGTH))
+    nb_votes = int(np.floor(_VOTE_LENGTH / _TIME_LENGTH))
 
-    expected = np.array([np.argmax(np.bincount(y[i:i+_TIME_LENGTH])) for i in range(0, len(y), _TIME_LENGTH)])
-    maj_expected = np.array([np.argmax(np.bincount(expected[i:i+nb_votes])) for i in range(0, len(expected), nb_votes)])
+    expected = np.array(
+        [
+            np.argmax(np.bincount(y[i : i + _TIME_LENGTH]))
+            for i in range(0, len(y), _TIME_LENGTH)
+        ]
+    )
+    maj_expected = np.array(
+        [
+            np.argmax(np.bincount(expected[i : i + nb_votes]))
+            for i in range(0, len(expected), nb_votes)
+        ]
+    )
 
     print(np.shape(expected))
     print(np.shape(maj_expected))
-
 
     """
     example usage (sd.save_training_data)

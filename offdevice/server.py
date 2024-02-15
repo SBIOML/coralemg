@@ -52,7 +52,7 @@ def send_raw_data_to_coral(subject, session):
     snd_filepath = "dataset/raw/%s_%s_raw.npz"%(subject, session)
     dest_filepath = "/home/mendel/dataset/%s_%s_raw.npz"%(subject, session)
 
-    with open("../config/ip_addrs/coral_ip.txt", "r") as f:
+    with open("config/ip_addrs/coral_ip.txt", "r") as f:
         coral_ip = f.read().rstrip('\n')
     send_file(snd_filepath, dest_filepath, coral_ip)
 
@@ -68,7 +68,7 @@ def send_model_to_coral(subject, session, model_type, compression_mode, ondevice
     snd_filepath = "model/tflite/%s/%s_edgetpu.tflite"%(model_type,model_name)
     dest_filepath = "/home/mendel/model/%s_edgetpu.tflite"%(model_name)
 
-    with open("../config/ip_addrs/coral_ip.txt", "r") as f:
+    with open("config/ip_addrs/coral_ip.txt", "r") as f:
         coral_ip = f.read().rstrip('\n')
     send_file(snd_filepath, dest_filepath, coral_ip)
 

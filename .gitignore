@@ -1,3 +1,15 @@
+binary
+.keras
+dataset
+lib64
+lib
+model
+offdevice_results
+share
+cuda*
+pyvenv.cfg
+bin
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

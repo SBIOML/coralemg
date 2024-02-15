@@ -53,7 +53,36 @@ def getData_EMG(path, user_id, session_nb, differential=False):
     return np.swapaxes(final_array, 2, 3)
 
 
-def save_training_data(dataset_path, subject, session, compressed_method="minmax", save_folder_path=""):
+def concat_gestures(path: str):
+    """
+    Load, process and concatenate all subjects and sessions from `path`.
+
+    Params:
+        - path : EMaGer dataset root
+
+    Returns a list of shape: 6*[(n, 64)] where n is the number of samples loaded.
+    """
+    subjects = [f"{i:03d}" for i in range(12)]
+    session = ["001", "002"]
+    concat = [np.ndarray((0, 64)) for _ in range(6)]
+    for sub in subjects:
+        for ses in session:
+            print(f"Processing subject {sub} session {ses}")
+            try:
+                data_array = getData_EMG(path, sub, ses, differential=False)
+                procd = dp.preprocess_data(data_array)
+                for i in range(6):
+                    shaped = np.reshape(procd[i], (procd.shape[1] * procd.shape[2], 64))
+                    concat[i] = np.vstack([concat[i], shaped])
+                    # print(concat[i].shape)
+            except FileNotFoundError:
+                continue
+    return concat
+
+
+def save_training_data(
+    dataset_path, subject, session, compressed_method="minmax", save_folder_path=""
+):
     """
     Save the training data for the tensorflow model
 
@@ -86,11 +115,12 @@ def save_training_data(dataset_path, subject, session, compressed_method="minmax
     X_rolled = dp.roll_data(X_compressed, 2)
 
     # Copy the labels to be the same size as the data
-    nb_rolled = int(np.floor(X_rolled.shape[0]/y.shape[0]))
+    nb_rolled = int(np.floor(X_rolled.shape[0] / y.shape[0]))
     y_rolled = np.tile(y, nb_rolled)
     y_rolled = np.array(y_rolled, dtype=np.uint8)
 
     np.savez(filename, data=X_rolled, label=y_rolled)
+
 
 def save_raw_data(dataset_path, subject, session, save_folder_path="dataset/raw/"):
     """
@@ -114,15 +144,18 @@ def save_raw_data(dataset_path, subject, session, save_folder_path="dataset/raw/
 
 if __name__ == "__main__":
     dataset_path = "dataset/emager"
-    subjects = ["000","001","002"]
+    subjects = ["000", "001", "002"]
     sessions = ["001", "002"]
     compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
-    
+
     for subject in subjects:
         for session in sessions:
             for compressed_method in compressed_methods:
                 save_training_data(
-                    dataset_path, subject, session, compressed_method=compressed_method, save_folder_path="dataset/train/%s"%(compressed_method)
+                    dataset_path,
+                    subject,
+                    session,
+                    compressed_method=compressed_method,
+                    save_folder_path="dataset/train/%s" % (compressed_method),
                 )
             save_raw_data(dataset_path, subject, session)
-
