@@ -31,11 +31,11 @@ Run `python3 offdevice/evaluate_model.py`. Every pre-exported Tensorflow models 
 
 ### On-device training
 
-TODO
+Guide in progress
 
 ### On-device evaluation
 
-TODO
+Guide in progress
 
 ### End-to-end system
 
@@ -51,7 +51,7 @@ Run `python3 offdevice/server.py`. Before starting it, you should configure the 
 
 If you find this work helpful and want to use it or refer to it, please consider citing it with the following:
 
-TODO
+To complete after publication
 
     @article{buteau2024coralemg,
         title={TinyML for Real-Time Embedded HD-EMG Hand
