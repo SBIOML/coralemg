@@ -7,7 +7,7 @@ Gesture Recognition with On-Device Fine-Tuning_ paper. As described in detail in
 
 ## Set up
 
-First, clone this repository in a convenient working directory, and run: `python3 -m venv.; source bin/activate; python3 -m pip install -r requirements.txt` to install the dependencies.
+First, clone this repository in a convenient working directory, and run: `python3 -m venv .; source bin/activate; python3 -m pip install -r requirements.txt` to install the dependencies.
 
 Afterwards, it's recommended to download the CoralEMG dataset from [this Kaggle link](https://www.kaggle.com/datasets/etiennebuteau/coralemg) and extract it to your working directory, giving the directory structure `<coralemg>/dataset/emager/`.
 
