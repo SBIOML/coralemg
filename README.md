@@ -35,7 +35,7 @@ Guide in progress
 
 ### On-device evaluation
 
-The results are printed to the terminal and are also saved into `ondevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj.
+The results are saved into `ondevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj.
 
 ### End-to-end system
 
