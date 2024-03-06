@@ -58,7 +58,7 @@ def train_model(dataset_path, subject="000", session="001", compression_mode="mi
 
     model_name = "emager_%s_%s_%s"%(subject, session, compression_mode)
 
-    saved_keras_model = 'model/%s.h5'%(model_name)
+    saved_keras_model = 'offdevice/model/%s.h5'%(model_name)
     model.save(saved_keras_model)
 
 def fine_tune_model(dataset_path, folder_model_path, model_name):
@@ -120,7 +120,7 @@ def fine_tune_model(dataset_path, folder_model_path, model_name):
                             validation_data=test_dataset)
         
         tuned_model_name = model_name + "_tuned_%s_%s"%(fine_tuning_range[0], fine_tuning_range[-1])
-        saved_keras_model = 'model/tuned/%s.h5'%(tuned_model_name)
+        saved_keras_model = 'offdevice/model/tuned/%s.h5'%(tuned_model_name)
         model.save(saved_keras_model)
 
         #generate_history_graph(history)
