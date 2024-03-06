@@ -31,7 +31,16 @@ Run `python3 offdevice/training_model.py`. The Tensorflow models will be created
 
 ### Off-device evaluation
 
-Run `python3 offdevice/evaluate_model.py`. Every pre-exported Tensorflow models will be evaluated. The results are printed to the terminal and are also saved into `offdevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj.
+Run `python3 offdevice/evaluate_model.py`. Every pre-exported Tensorflow models will be evaluated. The results are printed to the terminal and are also saved into `offdevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix and confusion_matrix_maj. 
+
+Modify and run `python3 offdevice/analyze_data.py` to get key statistics from the selected users and compression method. 
+
+### Compiling models for the edge TPU
+
+The [Edge TPU Compiler](https://coral.ai/docs/edgetpu/compiler/#system-requirements) must be first installed. 
+
+Run `python3 offdevice/convert_to_tflite.py` to convert the tensorflow models to tensorflow-lite.
+In each model/tflite/(normal,tuned,extractor) subdirectory, a compile_toedge.py script can be run directly from the subdirectory to compile the models for the Edge TPU.
 
 ### On-device training
 
@@ -39,7 +48,7 @@ Guide in progress
 
 ### On-device evaluation
 
-The results are saved into `ondevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj.
+The results are saved into `ondevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj, inference_time, maj_vote_time and process_time.
 
 ### End-to-end system
 
