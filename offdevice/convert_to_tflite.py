@@ -42,7 +42,7 @@ def convert_model_to_tflite(folder_path, model_name, model_type, tflite_model_na
     converter.representative_dataset = yield_representative_data
     tflite_model = converter.convert()
 
-    with open('model/tflite/%s/%s.tflite'%(model_type, tflite_model_name), 'wb') as f:
+    with open('offdevice/model/tflite/%s/%s.tflite'%(model_type, tflite_model_name), 'wb') as f:
         f.write(tflite_model)
 
 def convert_extractor_to_tflite(folder_path, model_name, model_type, tflite_model_name):
@@ -70,7 +70,7 @@ def convert_extractor_to_tflite(folder_path, model_name, model_type, tflite_mode
     converter.representative_dataset = yield_representative_data
     tflite_model = converter.convert()
 
-    with open('model/tflite/extractor/%s_ondevice.tflite'%(tflite_model_name), 'wb') as f:
+    with open('offdevice/model/tflite/extractor/%s_ondevice.tflite'%(tflite_model_name), 'wb') as f:
         f.write(tflite_model)
 
 
@@ -79,7 +79,7 @@ if __name__ == '__main__':
 
     compression_methods = ["minmax", "msb", "smart", "root"]
 
-    folder_path = "model"
+    folder_path = "offdevice/model"
     model_type = "normal"
     for i in range(3):
         for j in range(2):
@@ -91,7 +91,7 @@ if __name__ == '__main__':
                 tflite_model_name = model_name
                 convert_model_to_tflite(folder_path, model_name, model_type, tflite_model_name)
 
-    folder_path = "model/tuned"
+    folder_path = "offdevice/model/tuned"
     model_type = "tuned"
     for sub in range(3):
         subject = "00" + str(sub) if sub < 10 else "0" + str(sub)
@@ -106,7 +106,7 @@ if __name__ == '__main__':
                     convert_model_to_tflite(folder_path, model_name, model_type, tflite_model_name)
 
 
-    folder_path = "model"
+    folder_path = "offdevice/model"
     model_type = "normal"
     for i in range(3):
         for j in range(2):

@@ -146,9 +146,9 @@ if __name__ == '__main__':
     sessions = ["001", "002"]
     compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
 
-    model_path = "model"
+    model_path = "offdevice/model"
     dataset_path = "dataset/raw/"
-    result_path = "offdevice_results"
+    result_path = "offdevice/offdevice_results"
     for subject in subjects:
         for session in sessions:
             for compression_method in compression_methods:
