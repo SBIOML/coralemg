@@ -27,7 +27,7 @@ Run `python3 offdevice/training_model.py`. The Tensorflow models will be created
 
 ### Off-device evaluation
 
-Run `python3 offdevice/evaluate_model.py`. Every pre-exported Tensorflow models will be evaluated. The results are printed to the terminal and are also saved into `offdevice_results/` as Numpy archives with keys: _accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj_.
+Run `python3 offdevice/evaluate_model.py`. Every pre-exported Tensorflow models will be evaluated. The results are printed to the terminal and are also saved into `offdevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj.
 
 ### On-device training
 
@@ -35,7 +35,7 @@ Guide in progress
 
 ### On-device evaluation
 
-Guide in progress
+The results are printed to the terminal and are also saved into `ondevice_results/` as Numpy archives with keys: accuracy, accuracy_majority_vote, confusion_matrix, confusion_matrix_maj.
 
 ### End-to-end system
 
