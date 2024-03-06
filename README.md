@@ -15,7 +15,11 @@ Afterwards, it's recommended to download the CoralEMG dataset from [this Kaggle 
 
 ### Adding quantization methods
 
-You can define quantization methods in ``
+Quantization methods are defined in `offdevice/quantization.py` and/or `ondevice/quantization.py`. In general, functions should take in a `numpy` data array and return the compressed data.
+
+Then, add the method(s) in `data_processing.py`'s `compress_data` function with the appropriate arguments. As seen in `offdevice/training_model.py`, you can then create a list with the desired quantization methods and pass it to `train_all_subjects` or `finetune_all_subjects`.
+
+If you want to analyze the performance of quantization methods, you can use `offdevice/analyze_data.py`'s functions.
 
 ### Preprocess CoralEMG dataset
 

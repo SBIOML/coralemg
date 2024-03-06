@@ -38,7 +38,7 @@ def analyze(data, axis=None, centile=98):
     """
     adata = np.abs(data)
     max = np.max(adata, axis)
-    ninefive = np.percentile(adata, 98, axis)
+    ninefive = np.percentile(adata, centile, axis)
     mean = np.mean(adata, axis)
     median = np.median(adata, axis)
 

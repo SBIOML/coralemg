@@ -1,6 +1,6 @@
 import numpy as np
 from scipy import signal
-import compression as compress
+import quantization as compress
 
 def filter_utility(data, fs = 1000, Q = 30, notch_freq = 60):
     b_notch, a_notch = signal.iirnotch(notch_freq, Q, fs)
