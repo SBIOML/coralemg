@@ -270,8 +270,8 @@ if __name__ == "__main__":
     sessions = ["001", "002"]
     compression_methods = ["minmax", "msb", "smart", "root"]
 
-    result_path = "ondevice_results"
-    # result_path = "offdevice_results"
+    #result_path = "offdevice/ondevice_results"
+    result_path = "offdevice/offdevice_results"
 
     evaluate_accuracy(
         result_path, subjects, sessions, "root", fine_tuned=True, ondevice=False
