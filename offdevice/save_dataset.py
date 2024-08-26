@@ -1,9 +1,13 @@
 import os
+import re
+import fnmatch
 import numpy as np
+import scipy.io as sio
+from collections import Counter
 import data_processing as dp
 
 
-def getData_EMG(path, user_id, session_nb, differential=False):
+def load_emager(path, user_id, session_nb, differential=False):
     """
     Load EMG data from EMaGer v1 dataset.
 
@@ -12,16 +16,16 @@ def getData_EMG(path, user_id, session_nb, differential=False):
         - user_id : subject id
         - session_nb : session number
 
-    Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, num_channels)
+    Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, nb_channels)
     """
 
     # Parameters
-    # user_id = "001"
-    # session_nb = "000"
+    # user_id = "01"
+    # session_nb = "1"
     nb_gesture = 6
     nb_repetition = 10
     nb_pts = 5000
-    start_path = "%s/%s/session_%s/" % (path, user_id, session_nb)  # ordi UL
+    start_path = "%s/subject_%s/session_%s/" % (path, user_id, session_nb)  # ordi UL
     data_array = np.zeros((nb_gesture, nb_repetition, 64, nb_pts), dtype=int)
 
     first_file = os.listdir(start_path)[0]
@@ -30,8 +34,9 @@ def getData_EMG(path, user_id, session_nb, differential=False):
         for rep in range(nb_repetition):
             path = (
                 start_path
+                + "0"
                 + user_id
-                + "-"
+                + "-00"
                 + session_nb
                 + "-00"
                 + str(gest)
@@ -52,36 +57,141 @@ def getData_EMG(path, user_id, session_nb, differential=False):
 
     return np.swapaxes(final_array, 2, 3)
 
-
-def concat_gestures(path: str):
+def load_capgmyo(path, user_id, session_nb):
     """
-    Load, process and concatenate all subjects and sessions from `path`.
+    Load EMG data from CapgMyo dataset.
+    The format of the folder has to be 
+
+    capgmyo
+├── subject01_session1
+│   ├── 001-001.mat
+│   ├── 001-002.mat
+...
 
     Params:
-        - path : EMaGer dataset root
+        - path : path to Capgmyo root folder
+        - user_id : subject id
+        - session_nb : session number
 
-    Returns a list of shape: 6*[(n, 64)] where n is the number of samples loaded.
+    Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, nb_channels)
     """
-    subjects = [f"{i:03d}" for i in range(12)]
-    session = ["001", "002"]
-    concat = [np.ndarray((0, 64)) for _ in range(6)]
-    for sub in subjects:
-        for ses in session:
-            print(f"Processing subject {sub} session {ses}")
-            try:
-                data_array = getData_EMG(path, sub, ses, differential=False)
-                procd = dp.preprocess_data(data_array)
-                for i in range(6):
-                    shaped = np.reshape(procd[i], (procd.shape[1] * procd.shape[2], 64))
-                    concat[i] = np.vstack([concat[i], shaped])
-                    # print(concat[i].shape)
-            except FileNotFoundError:
-                continue
-    return concat
+
+    # Parameters
+    # user_id = "01"
+    # session_nb = "1"
+    dirpath = "%s/subject%s_session%s/" %(path, user_id, session_nb)
+    files = fnmatch.filter(os.listdir(dirpath), '*.mat')
+    files = np.sort(files)
+    experiment_list = [] # TODO : See if better method exists
+    for file in files:
+        experiment = sio.loadmat(dirpath+file)
+
+        experiment_list.append(experiment)
+
+    experiment_array = _capgmyo_format_array(experiment_list)
+    
+    return experiment_array
+
+def _capgmyo_format_array(experiment_list):
+    exp_0 = experiment_list[0]
+    data_length, nb_channels = np.shape(exp_0['data'])
+    label_list = []
+    for i, experiment in enumerate(experiment_list):
+        label_list.append(experiment['gesture'][0][0])
+    count = Counter(label_list)
+
+    nb_labels = len(count.values())
+    nb_exp = max(count.values())
+
+    data_array = np.full((nb_labels, nb_exp, data_length, nb_channels), None)
+    curr_exp = 0
+    previous_label = -1
+    for i, experiment in enumerate(experiment_list):
+        curr_data = experiment['data']
+        label = experiment['gesture']
+        if label != previous_label:
+            curr_exp = 0
+        else :
+            curr_exp += 1
+        data_array[label-1,curr_exp,:,:] = curr_data[:,:]
+        previous_label = label
+    return data_array
+
+def load_hyser(path, user_id, session_nb):
+    """
+    Load EMG data from Hyser dataset.
+
+    Params:
+        - path : path to Hyser root
+        - user_id : subject id
+        - session_nb : session number
+
+    Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, nb_channels)
+    """
+
+    # Parameters
+    # user_id = "01"
+    # session_nb = "1"
+
+    # Compiled regex used for gain and baseline
+    RE_GAIN = re.compile(".+?(?=\()")
+    RE_BASELINE = re.compile("(?<=\().*(?=\))")
+
+    task_type = "maintenance"
+    sig_type = "preprocess"
+
+    dirpath = "%s/subject%s_session%s/" %(path, user_id, session_nb)
+    nb_files = len(fnmatch.filter(os.listdir(dirpath), '%s_%s_*.dat'%(task_type, sig_type)))
+
+    data = [] # TODO : See if better method exists
+
+    file_name = "%slabel_%s.txt"%(dirpath, task_type)
+    with open(file_name) as fid :
+        labels = np.loadtxt(fid, delimiter =',', dtype = int)
+
+    for i in range(1,nb_files+1):
+        file_name = "%s%s_%s_sample%s"%(dirpath, task_type, sig_type, i)
+        # Import data
+        with open(file_name+".dat", 'rb') as fid:
+            data_array = np.fromfile(fid, dtype=np.int16).reshape(-1,256).astype('float')
+        
+        # Import gain and baseline and applies it to data
+        with open(file_name+".hea",'r') as fid:
+            head_info = np.char.split((fid.readlines()[1:]))
+            for j,line in enumerate(head_info):
+                str_tmp = line[2]
+                gain = float(RE_GAIN.match(str_tmp).group())
+                baseline = float(RE_BASELINE.search(str_tmp).group())
+                data_array[:,j] = (data_array[:,j]-baseline)/gain
+        
+        # Reshape the data
+        data_array = data_array.reshape(-1,4,8,8) 
+        data_array = np.flip(data_array,(2,3))
+        data_array[:,[1,2],:,:] = data_array[:,[2,1],:,:]
+
+
+        data_array = np.concatenate((np.concatenate((data_array[:,0,:,:],data_array[:,1,:,:]),axis = 2),np.concatenate((data_array[:,2,:,:],data_array[:,3,:,:]),axis = 2)),axis=1).reshape(-1,256)
+        
+        data.append(data_array.reshape(-1,256)) # TODO : See if better method exists
+    
+    nb_experiment, time_length, nb_channels = np.shape(data)
+    nb_gesture = len(set(labels))
+    nb_repetition = int(nb_experiment/nb_gesture)
+
+    # First 512 data points are noise
+    time_length = time_length-512
+    experiment_array = np.zeros((nb_gesture, nb_repetition, time_length, nb_channels))
+
+    for i, experiment in enumerate(data):
+        data[i] = experiment[512:,:]
+        curr_label = int(labels[i]-1)
+        experiment_array[curr_label, i%nb_repetition,:,:] = data[i]
+
+    return experiment_array
 
 
 def save_training_data(
-    dataset_path, subject, session, compressed_method="minmax", save_folder_path=""
+    dataset_path, subject, session, compressed_method="minmax", nb_bits=8, save_folder_path=""
 ):
     """
     Save the training data for the tensorflow model
@@ -89,7 +199,8 @@ def save_training_data(
     @param dataset_path the path to the dataset
     @param subject the subject to use, must be 000, 001, ...
     @param session the session to use, must be 001, 002
-    @param time_length the length of the window
+    @param compressed_method the compression method used
+    @param nb_bits the number of bits to compress to
     @param save_folder_path the path of the folder to save the data in
 
     """
@@ -97,21 +208,18 @@ def save_training_data(
     if not os.path.exists(main_folder_path):
         os.makedirs(main_folder_path)
 
-    filename = "%s/%s_%s_%s.npz" % (
+    data_array = load_emager(dataset_path, subject, session, differential=False)
+    averages_data = dp.preprocess_data(data_array)
+    X, y = dp.extract_with_labels(averages_data)
+
+    X_compressed = dp.compress_data(X, method=compressed_method, residual_bits=nb_bits)
+    filename = "%s/%s_%s_%s_%sbits.npz" % (
         main_folder_path,
         subject,
         session,
         compressed_method,
+        nb_bits
     )
-
-    data_array = getData_EMG(dataset_path, subject, session, differential=False)
-    averages_data = dp.preprocess_data(data_array)
-    X, y = dp.extract_with_labels(averages_data)
-
-    if compressed_method == "baseline":
-        X_compressed = X
-    else:
-        X_compressed = dp.compress_data(X, method=compressed_method)
     X_rolled = dp.roll_data(X_compressed, 2)
 
     # Copy the labels to be the same size as the data
@@ -138,24 +246,34 @@ def save_raw_data(dataset_path, subject, session, save_folder_path="dataset/raw/
         os.makedirs(main_folder_path)
 
     filename = "%s/%s_%s_raw.npz" % (main_folder_path, subject, session)
-    data_array = getData_EMG(dataset_path, subject, session, differential=False)
+    data_array = load_emager(dataset_path, subject, session, differential=False)
     np.savez(filename, data=data_array)
 
 
 if __name__ == "__main__":
     dataset_path = "dataset/emager"
-    subjects = ["000", "001", "002"]
+    subjects = ["000","001","002","003","004","005","006","007","008","009","010","011"]
     sessions = ["001", "002"]
-    compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    bits = [4,5,6,7,8]
+    #compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    compressed_methods = ["baseline"]
 
-    for subject in subjects:
-        for session in sessions:
-            for compressed_method in compressed_methods:
-                save_training_data(
-                    dataset_path,
-                    subject,
-                    session,
-                    compressed_method=compressed_method,
-                    save_folder_path="dataset/train/%s" % (compressed_method),
-                )
-            save_raw_data(dataset_path, subject, session)
+    # for subject in subjects:
+    #     for session in sessions:
+    #         for compressed_method in compressed_methods:
+    #             for bit in bits:
+    #                 save_training_data(
+    #                     dataset_path,
+    #                     subject,
+    #                     session,
+    #                     compressed_method=compressed_method,
+    #                     nb_bits=bit,
+    #                     save_folder_path="dataset/train/%s" % (compressed_method),
+    #                 )
+    #         save_raw_data(dataset_path, subject, session)
+
+    dataset_path = "dataset/hyser"
+    subject = "01"
+    session = "1"
+    data = load_hyser(dataset_path, subject, session)
+    print(np.shape(data))
