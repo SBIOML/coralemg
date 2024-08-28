@@ -7,25 +7,25 @@ from collections import Counter
 import data_processing as dp
 
 
-def load_emager(path, user_id, session_nb, differential=False):
+def load_emager(path, subject, session, differential=False):
     """
     Load EMG data from EMaGer v1 dataset.
 
     Params:
         - path : path to EMaGer root
-        - user_id : subject id
-        - session_nb : session number
+        - subject : subject id
+        - session : session number
 
     Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, nb_channels)
     """
 
     # Parameters
-    # user_id = "01"
-    # session_nb = "1"
+    # subject = "01"
+    # session = "1"
     nb_gesture = 6
     nb_repetition = 10
     nb_pts = 5000
-    start_path = "%s/subject_%s/session_%s/" % (path, user_id, session_nb)  # ordi UL
+    start_path = "%s/subject_%s/session_%s/" % (path, subject, session)  # ordi UL
     data_array = np.zeros((nb_gesture, nb_repetition, 64, nb_pts), dtype=int)
 
     first_file = os.listdir(start_path)[0]
@@ -35,9 +35,9 @@ def load_emager(path, user_id, session_nb, differential=False):
             path = (
                 start_path
                 + "0"
-                + user_id
+                + subject
                 + "-00"
-                + session_nb
+                + session
                 + "-00"
                 + str(gest)
                 + "-00"
@@ -57,7 +57,7 @@ def load_emager(path, user_id, session_nb, differential=False):
 
     return np.swapaxes(final_array, 2, 3)
 
-def load_capgmyo(path, user_id, session_nb):
+def load_capgmyo(path, subject, session):
     """
     Load EMG data from CapgMyo dataset.
     The format of the folder has to be 
@@ -70,16 +70,16 @@ def load_capgmyo(path, user_id, session_nb):
 
     Params:
         - path : path to Capgmyo root folder
-        - user_id : subject id
-        - session_nb : session number
+        - subject : subject id
+        - session : session number
 
     Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, nb_channels)
     """
 
     # Parameters
-    # user_id = "01"
-    # session_nb = "1"
-    dirpath = "%s/subject%s_session%s/" %(path, user_id, session_nb)
+    # subject = "01"
+    # session = "1"
+    dirpath = "%s/subject%s_session%s/" %(path, subject, session)
     files = fnmatch.filter(os.listdir(dirpath), '*.mat')
     files = np.sort(files)
     experiment_list = [] # TODO : See if better method exists
@@ -117,21 +117,21 @@ def _capgmyo_format_array(experiment_list):
         previous_label = label
     return data_array
 
-def load_hyser(path, user_id, session_nb):
+def load_hyser(path, subject, session):
     """
     Load EMG data from Hyser dataset.
 
     Params:
         - path : path to Hyser root
-        - user_id : subject id
-        - session_nb : session number
+        - subject : subject id
+        - session : session number
 
     Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, nb_channels)
     """
 
     # Parameters
-    # user_id = "01"
-    # session_nb = "1"
+    # subject = "01"
+    # session = "1"
 
     # Compiled regex used for gain and baseline
     RE_GAIN = re.compile(".+?(?=\()")
@@ -140,7 +140,7 @@ def load_hyser(path, user_id, session_nb):
     task_type = "maintenance"
     sig_type = "preprocess"
 
-    dirpath = "%s/subject%s_session%s/" %(path, user_id, session_nb)
+    dirpath = "%s/subject%s_session%s/" %(path, subject, session)
     nb_files = len(fnmatch.filter(os.listdir(dirpath), '%s_%s_*.dat'%(task_type, sig_type)))
 
     data = [] # TODO : See if better method exists
@@ -189,9 +189,31 @@ def load_hyser(path, user_id, session_nb):
 
     return experiment_array
 
+def load_dataset(path, subject, session):
+    """
+    Load EMG data from given dataset.
+
+    Params:
+        - path : path to EMG dataset
+        - subject : subject id
+        - session : session number
+
+    Returns the loaded data with shape (nb_gesture, nb_repetition, time_length, nb_channels)
+    """
+    if "emager" in path:
+        experiment_array = load_emager(path, subject, session, differential=False)
+    elif "capgmyo" in path:
+        experiment_array = dp.convert_capgmyo_16bit(load_capgmyo(path, subject, session))
+    elif "hyser" in path:
+        experiment_array = load_hyser(path, subject, session)
+    else:
+        raise Exception("Supported dataset is not in path")
+    
+    return experiment_array
+
 
 def save_training_data(
-    dataset_path, subject, session, compressed_method="minmax", nb_bits=8, save_folder_path=""
+    dataset_path, subject, session, compressed_method="minmax", nb_bits=8, window_length=25, dimension=(4,16), save_folder_path=""
 ):
     """
     Save the training data for the tensorflow model
@@ -201,6 +223,8 @@ def save_training_data(
     @param session the session to use, must be 001, 002
     @param compressed_method the compression method used
     @param nb_bits the number of bits to compress to
+    @param window_length the length of the time window to use
+    @param dimension the number of electrode in each axis (x,y)
     @param save_folder_path the path of the folder to save the data in
 
     """
@@ -208,8 +232,10 @@ def save_training_data(
     if not os.path.exists(main_folder_path):
         os.makedirs(main_folder_path)
 
-    data_array = load_emager(dataset_path, subject, session, differential=False)
-    averages_data = dp.preprocess_data(data_array)
+    data_array = load_dataset(dataset_path, subject, session)
+
+    filter_utility = True if "emager" in dataset_path else False
+    averages_data = dp.preprocess_data(data_array, window_length=window_length, filter_utility=filter_utility)
     X, y = dp.extract_with_labels(averages_data)
 
     X_compressed = dp.compress_data(X, method=compressed_method, residual_bits=nb_bits)
@@ -220,7 +246,7 @@ def save_training_data(
         compressed_method,
         nb_bits
     )
-    X_rolled = dp.roll_data(X_compressed, 2)
+    X_rolled = dp.roll_data(X_compressed, 2, v_dim=dimension[0], h_dim=dimension[1])
 
     # Copy the labels to be the same size as the data
     nb_rolled = int(np.floor(X_rolled.shape[0] / y.shape[0]))
@@ -237,7 +263,6 @@ def save_raw_data(dataset_path, subject, session, save_folder_path="dataset/raw/
     @param dataset_path the path to the dataset
     @param subject the subject to use, must be 000, 001, ...
     @param session the session to use, must be 001, 002
-    @param time_length the length of the window
     @param save_folder_path the path of the folder to save the data in
 
     """
@@ -246,7 +271,7 @@ def save_raw_data(dataset_path, subject, session, save_folder_path="dataset/raw/
         os.makedirs(main_folder_path)
 
     filename = "%s/%s_%s_raw.npz" % (main_folder_path, subject, session)
-    data_array = load_emager(dataset_path, subject, session, differential=False)
+    data_array = load_dataset(dataset_path, subject, session)
     np.savez(filename, data=data_array)
 
 
@@ -275,5 +300,13 @@ if __name__ == "__main__":
     dataset_path = "dataset/hyser"
     subject = "01"
     session = "1"
-    data = load_hyser(dataset_path, subject, session)
-    print(np.shape(data))
+    #data = load_hyser(dataset_path, subject, session)
+    #print(np.shape(data))
+
+    save_training_data(
+        dataset_path,
+        subject,
+        session,
+        compressed_method="minmax",
+        nb_bits=7,
+        save_folder_path="dataset/train/%s" % ("minmax"))
