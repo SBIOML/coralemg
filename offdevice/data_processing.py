@@ -36,7 +36,7 @@ def extract_with_labels(data_array):
     return X, y
 
 
-def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60, filter_utility=False):
+def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60, filtering_utility=False):
     """
     Given a data array, it will preprocess the data by applying the desired operations.
 
@@ -59,7 +59,7 @@ def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60, 
                 start = curr_window * window_length
                 end = (curr_window + 1) * window_length
                 processed_data = data_array[label, experiment, start:end, :]
-                if filter_utility:
+                if filtering_utility:
                     processed_data = filter_utility(
                         processed_data, fs=fs, Q=Q, notch_freq=notch_freq
                     )
@@ -132,6 +132,9 @@ def compress_data(data, method="minmax", residual_bits=8):
 
 def convert_capgmyo_16bit(experiment_array):
     return np.floor(experiment_array*32767).astype(np.int16)
+
+def convert_hyser_16bit(experiment_array):
+    pass
 
 if __name__ == "__main__":
     # generate sinus of 60 hz

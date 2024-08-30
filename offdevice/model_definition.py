@@ -21,7 +21,7 @@ def create_average_model(nb_class):
 
     return model
 
-def emager_net(nb_class):
+def coralemg_net(nb_class):
     activation = 'relu6'
     hidden_layer = 64
     model = tf.keras.Sequential([

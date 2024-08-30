@@ -17,13 +17,14 @@ def scheduler(epoch, lr):
   else:
     return lr * tf.math.exp(-0.5)
 
-def train_model(dataset_path, subject="000", session="001", compression_mode="minmax", bit=8, nb_class=6):
+def train_model(dataset_name, dataset_path, subject="00", session="1", compression_mode="minmax", bit=8, nb_class=6):
     '''
     Train the model
 
+    @param dataset_name the name of the dataset
     @param dataset_path the path to the dataset
-    @param subject the subject to use, must be 000, 001, ...
-    @param session the session to use, must be 001, 002
+    @param subject the subject to use, must be 00, 01, ...
+    @param session the session to use, must be 1, 2
     @param compression_mode compression method used
     @param nb_class the number of class to use    
     '''
@@ -39,7 +40,7 @@ def train_model(dataset_path, subject="000", session="001", compression_mode="mi
     reduce_lr = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
 
-    model = md.emager_net(NB_CLASSES)
+    model = md.corealemg_net(NB_CLASSES)
 
     model.compile(optimizer=optimizer, 
                 loss='sparse_categorical_crossentropy', 
@@ -56,15 +57,16 @@ def train_model(dataset_path, subject="000", session="001", compression_mode="mi
 
     #generate_history_graph(history)
 
-    model_name = "emager_%s_%s_%s_%sbits"%(subject, session, compression_mode, bit)
+    model_name = "%s_%s_%s_%s_%sbits"%(dataset_name, subject, session, compression_mode, bit)
 
     saved_keras_model = 'offdevice/model/%s.h5'%(model_name)
     model.save(saved_keras_model)
 
-def fine_tune_model(dataset_path, folder_model_path, model_name):
+def fine_tune_model(dataset_name, dataset_path, folder_model_path, model_name):
     '''
     Fine tune the model
 
+    @param dataset_name the name of the dataset
     @param dataset_path the path to the dataset
     @param folder_model_path the path to the folder containing the model
     @param model_name the name of the model to fine tune
@@ -80,14 +82,17 @@ def fine_tune_model(dataset_path, folder_model_path, model_name):
     session = model_name.split("_")[2]
     compressed_method = model_name.split("_")[3]
 
-    fine_tuning_session = "002" if session == "001" else "001"
+    fine_tuning_session = "2" if session == "1" else "1"
 
     raw_dataset_path = '%s/%s_%s_raw.npz'%(dataset_path, subject, fine_tuning_session)
     
     with np.load(raw_dataset_path) as data:
         raw_data = data['data']
+
+    filtering_utility = True if "emager" in dataset_name else False
+    window_length = 50 if "hyser" in dataset_name else 25
     
-    averages_data = dp.preprocess_data(raw_data)
+    averages_data = dp.preprocess_data(raw_data, window_length=window_length, filtering_utility=filtering_utility)
 
     for i in range(5):
         # load the model
@@ -126,9 +131,9 @@ def fine_tune_model(dataset_path, folder_model_path, model_name):
         #generate_history_graph(history)
 
 
-def create_training_dataset(dataset_path, subject="000", session="001", compression_mode="minmax", bit=8):
+def create_training_dataset(dataset_path, subject="00", session="1", compression_mode="minmax", bit=8):
 
-    test_session = "002" if session == "001" else "001"
+    test_session = "2" if session == "1" else "1"
 
     train_dataset_path = '%s/%s_%s_%s_%sbits.npz'%(dataset_path, subject, session, compression_mode, bit)
     test_dataset_path = '%s/%s_%s_%s_%sbits.npz'%(dataset_path, subject, test_session, compression_mode, bit)
@@ -138,6 +143,7 @@ def create_training_dataset(dataset_path, subject="000", session="001", compress
         y_train = data['label']
 
     with np.load(test_dataset_path) as data:
+        
         X_test = data['data'][24000:36000,:]
         y_test = data['label'][24000:36000]
 
@@ -200,34 +206,35 @@ def generate_history_graph(history):
     plt.xlabel('epoch')
     plt.show()
 
-def train_all_subjects(dataset_path, compression_methods, bits):
-    for i in range(13):
+def train_all_subjects(dataset_name, dataset_path, subjects, compression_methods, bits):
+    for subject in subjects:
         for j in range(2):
             for compression in compression_methods:
                 for bit in bits:
                     data_path_compressed = dataset_path+"%s"%(compression)
-                    subject = "00" + str(i) if i < 10 else "0" + str(i)
-                    session = "00" + str(j+1)
-                    train_model(data_path_compressed, subject, session, compression, bit)
+                    session = str(j+1)
+                    train_model(dataset_name, data_path_compressed, subject, session, compression, bit)
 
-def finetune_all_subjects(dataset_path, folder_model_path, compression_methods):
+def finetune_all_subjects(dataset_name, dataset_path, folder_model_path, compression_methods):
     for i in range(13):
         for j in range(2):
             for compression in compression_methods:
                 for bit in bits:
-                    subject = "00" + str(i) if i < 10 else "0" + str(i)
-                    session = "00" + str(j+1)
-                    model_name = "emager_%s_%s_%s_%sbits"%(subject, session, compression, bit)
-                    fine_tune_model(dataset_path, folder_model_path, model_name, bit)
+                    subject = "0" + str(i) if i < 10 else str(i)
+                    session = str(j+1)
+                    model_name = "%s_%s_%s_%s_%sbits"%(dataset_name, subject, session, compression, bit)
+                    fine_tune_model(dataset_name, dataset_path, folder_model_path, model_name, bit)
 
 if __name__ == "__main__":
-    train_dataset_path= 'dataset/train/'
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
+    dataset_name = "emager"
+    train_dataset_path= 'dataset/train/%s/'%(dataset_name)
     #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
     compression_methods = ["minmax", "msb", "smart", "root"]
     bits = [4,5,6,7,8]
-    train_all_subjects(train_dataset_path, compression_methods, bits)
+    train_all_subjects(dataset_name, train_dataset_path, compression_methods, bits)
 
 
-    # raw_dataset_path = 'dataset/raw/'
+    # raw_dataset_path = 'dataset/raw/%s'%(dataset_name)
     # folder_model_path = 'offdevice/model'
     # finetune_all_subjects(raw_dataset_path, folder_model_path, compression_methods, bits)

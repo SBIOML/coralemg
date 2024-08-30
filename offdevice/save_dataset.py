@@ -205,7 +205,7 @@ def load_dataset(path, subject, session):
     elif "capgmyo" in path:
         experiment_array = dp.convert_capgmyo_16bit(load_capgmyo(path, subject, session))
     elif "hyser" in path:
-        experiment_array = load_hyser(path, subject, session)
+        experiment_array = dp.convert_hyser_16bit(load_hyser(path, subject, session))
     else:
         raise Exception("Supported dataset is not in path")
     
@@ -234,8 +234,8 @@ def save_training_data(
 
     data_array = load_dataset(dataset_path, subject, session)
 
-    filter_utility = True if "emager" in dataset_path else False
-    averages_data = dp.preprocess_data(data_array, window_length=window_length, filter_utility=filter_utility)
+    filtering_utility = True if "emager" in dataset_path else False
+    averages_data = dp.preprocess_data(data_array, window_length=window_length, filtering_utility=filtering_utility)
     X, y = dp.extract_with_labels(averages_data)
 
     X_compressed = dp.compress_data(X, method=compressed_method, residual_bits=nb_bits)
@@ -276,12 +276,12 @@ def save_raw_data(dataset_path, subject, session, save_folder_path="dataset/raw/
 
 
 if __name__ == "__main__":
-    dataset_path = "dataset/emager"
-    subjects = ["000","001","002","003","004","005","006","007","008","009","010","011"]
-    sessions = ["001", "002"]
-    bits = [4,5,6,7,8]
-    #compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
-    compressed_methods = ["baseline"]
+    # dataset_path = "dataset/emager"
+    # subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
+    # sessions = ["1", "2"]
+    # bits = [4,5,6,7,8]
+    # compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    # #compressed_methods = ["baseline"]
 
     # for subject in subjects:
     #     for session in sessions:
@@ -293,20 +293,28 @@ if __name__ == "__main__":
     #                     session,
     #                     compressed_method=compressed_method,
     #                     nb_bits=bit,
-    #                     save_folder_path="dataset/train/%s" % (compressed_method),
+    #                     save_folder_path="dataset/train/emager/%s" % (compressed_method),
     #                 )
-    #         save_raw_data(dataset_path, subject, session)
+    #         save_raw_data(dataset_path, subject, session, "dataset/raw/emager/")
 
-    dataset_path = "dataset/hyser"
-    subject = "01"
-    session = "1"
-    #data = load_hyser(dataset_path, subject, session)
-    #print(np.shape(data))
+    dataset_path = "dataset/capgmyo"
+    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    sessions = ["1", "2"]
+    bits = [4,5,6,7,8]
+    compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    #compressed_methods = ["baseline"]
 
-    save_training_data(
-        dataset_path,
-        subject,
-        session,
-        compressed_method="minmax",
-        nb_bits=7,
-        save_folder_path="dataset/train/%s" % ("minmax"))
+    for subject in subjects:
+        for session in sessions:
+            for compressed_method in compressed_methods:
+                for bit in bits:
+                    save_training_data(
+                        dataset_path,
+                        subject,
+                        session,
+                        compressed_method=compressed_method,
+                        nb_bits=bit,
+                        dimension=(8,16),
+                        save_folder_path="dataset/train/capgmyo/%s" % (compressed_method),
+                    )
+            save_raw_data(dataset_path, subject, session, "dataset/raw/capgmyo/")
