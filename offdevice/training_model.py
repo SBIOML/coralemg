@@ -39,7 +39,9 @@ def train_model(dataset, model_name, dataset_path, subject="00", session="1", co
     optimizer = tf.keras.optimizers.AdamW(0.00025)
     reduce_lr = tf.keras.callbacks.LearningRateScheduler(scheduler)
 
-    model = md.coralemg_net(dataset.nb_class)
+    model_shape = (dataset.sensors_dim[0], dataset.sensors_dim[1], 1)
+
+    model = md.coralemg_net(dataset.nb_class, model_shape)
 
     model.compile(optimizer=optimizer, 
                 loss='sparse_categorical_crossentropy', 
@@ -227,15 +229,30 @@ def finetune_all_subjects(dataset, model_name, dataset_path, subjects, folder_mo
 
 if __name__ == "__main__":
 
-    Emager = dtdef.EmagerDataset()
-    dataset_name = Emager.name
-    subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
+    # Emager = dtdef.EmagerDataset()
+    # dataset_name = Emager.name
+    # subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
+    # model_name = "cnn"
+    # train_dataset_path= 'dataset/train/%s/'%(dataset_name)
+    # #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
+    # compression_methods = ["minmax", "msb", "smart", "root"]
+    # bits = [4,5,6,7,8]
+    # train_all_subjects(Emager, model_name, train_dataset_path, subjects, compression_methods, bits)
+
+
+    # raw_dataset_path = 'dataset/raw/%s'%(dataset_name)
+    # folder_model_path = 'offdevice/model'
+    # finetune_all_subjects(raw_dataset_path, folder_model_path, compression_methods, bits)
+
+    Capgmyo = dtdef.CapgmyoDataset()
+    dataset_name = Capgmyo.name
+    subjects = ["01","02","03","04","05","06","07","08","09","10"]
     model_name = "cnn"
     train_dataset_path= 'dataset/train/%s/'%(dataset_name)
     #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
     compression_methods = ["minmax", "msb", "smart", "root"]
     bits = [4,5,6,7,8]
-    train_all_subjects(Emager, model_name, train_dataset_path, subjects, compression_methods, bits)
+    train_all_subjects(Capgmyo, model_name, train_dataset_path, subjects, compression_methods, bits)
 
 
     # raw_dataset_path = 'dataset/raw/%s'%(dataset_name)
