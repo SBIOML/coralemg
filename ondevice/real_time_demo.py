@@ -10,7 +10,7 @@ import tpu_inference as infer
 import sklearn.metrics as metrics
 import serial
 import struct
-
+from pycoral.adapters import common
 import gpio_drivers as gpio_drivers
 
 lock = mp.Lock()
@@ -18,13 +18,13 @@ lock = mp.Lock()
 _TIME_LENGTH = const(25)
 _VOTE_LENGTH = const(150)
 
-
-def create_shared_memory(time_length):
+#TODO add nb channels
+def create_shared_memory(time_length, nb_channels):
     done_tmp = np.array([False], dtype=bool)
     mutex_tmp = np.array([0, 0, 0], dtype=np.int8)
-    data_buffer_1_tmp = np.zeros((time_length, 64), dtype=np.float32)
-    data_buffer_2_tmp = np.zeros((time_length, 64), dtype=np.float32)
-    data_buffer_3_tmp = np.zeros((time_length, 64), dtype=np.float32)
+    data_buffer_1_tmp = np.zeros((time_length, nb_channels), dtype=np.float32)
+    data_buffer_2_tmp = np.zeros((time_length, nb_channels), dtype=np.float32)
+    data_buffer_3_tmp = np.zeros((time_length, nb_channels), dtype=np.float32)
     # Now create a NumPy array backed by shared memory
     done_shm = shared_memory.SharedMemory(create=True, size=done_tmp.nbytes)
     mutex_shm = shared_memory.SharedMemory(create=True, size=mutex_tmp.nbytes)
@@ -96,7 +96,7 @@ def sample_data(window_length, done_shr_name, mutex_shr_name, buff_1_shr_name, b
     ser.close()
     done[0] = True
 
-def main_process(model_path, compression_method, vote_length, window_length, done_shr_name, mutex_shr_name, buff_1_shr_name, buff_2_shr_name, buff_3_shr_name, debug=False):
+def main_process(model_path, compression_method, residual_bits, vote_length, window_length, done_shr_name, mutex_shr_name, buff_1_shr_name, buff_2_shr_name, buff_3_shr_name, debug=False):
     # Create shared memory
     existing_done_shm = shared_memory.SharedMemory(name=done_shr_name)
     existing_mutex_shm = shared_memory.SharedMemory(name=mutex_shr_name)
@@ -142,8 +142,10 @@ def main_process(model_path, compression_method, vote_length, window_length, don
 
     # Create interpreter
     interpreter = infer.make_interpreter(model_path)
+    #TODO check if correct
+    width, height = common.input_size(interpreter)
     interpreter.allocate_tensors()
-    infer.make_inference(interpreter, np.random.rand(64).reshape(4,16,1))
+    infer.make_inference(interpreter, np.random.rand(64).reshape(width,height,1))
 
     nb_votes = int(np.floor(vote_length/window_length))
     votes_arr = np.zeros(nb_votes, dtype=np.uint8)
@@ -174,8 +176,7 @@ def main_process(model_path, compression_method, vote_length, window_length, don
             elif read_buffer == 2:
                 data = dp.process_buffer(buff3, fs=1000, Q=30, notch_freq=60)
 
-            scaled_data = dp.compress_data(data.reshape(1,64), method=compression_method).reshape(4,16,1)
-
+            scaled_data = dp.compress_data(data.reshape(1,64), compression_method, residual_bits).reshape(width,height,1)
 
             if training == 1:                
                 if sent_gesture < 100:
@@ -231,15 +232,15 @@ def main_process(model_path, compression_method, vote_length, window_length, don
     lcd.backlight_off()
     lcd.display_off()
 
-def start_process(subject, session, compression_method, fine_tuned=False, on_device=False, debug=False):
-    running_model_name = "emager_%s_%s_%s"%(subject, session, compression_method)
+def start_process(dataset, subject, session, compression_method, residual_bits, fine_tuned=False, on_device=False, debug=False):
+    running_model_name = "%s_%s_%s_%s_%sbits"%(dataset, subject, session, compression_method, residual_bits)
     test_session = "002" if session == "001" else "001"
     model_path = "/home/mendel/model/%s_edgetpu.tflite"%(running_model_name)
 
     # Create shared memory
     done_shm, mutex_shm, buff_1_shm, buff_2_shm, buff_3_shm  = create_shared_memory(_TIME_LENGTH)
     data_sampling = mp.Process(name="adc_sampling", target=sample_data, args=(_TIME_LENGTH, done_shm.name, mutex_shm.name, buff_1_shm.name, buff_2_shm.name, buff_3_shm.name, debug))
-    main = mp.Process(name="main_process", target=main_process, args=(model_path, compression_method, _VOTE_LENGTH, _TIME_LENGTH, done_shm.name, mutex_shm.name, buff_1_shm.name, buff_2_shm.name, buff_3_shm.name, debug))
+    main = mp.Process(name="main_process", target=main_process, args=(model_path, compression_method, residual_bits, _VOTE_LENGTH, _TIME_LENGTH, done_shm.name, mutex_shm.name, buff_1_shm.name, buff_2_shm.name, buff_3_shm.name, debug))
     main.start()
     time.sleep(10)
     data_sampling.start()
@@ -265,7 +266,8 @@ def start_process(subject, session, compression_method, fine_tuned=False, on_dev
 
 
 if __name__ == '__main__':
-
+    dataset = "emager"
     subject = "002"
-    start_process(subject, "001", "root", fine_tuned=False, on_device=False, debug=False)
+    residual_bits = 8
+    start_process(dataset, subject, "001", "root", residual_bits, fine_tuned=False, on_device=False, debug=False)
 

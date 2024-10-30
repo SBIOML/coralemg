@@ -55,11 +55,12 @@ def extract_embeddings(data_array, interpreter):
     """
     nb_data = np.shape(data_array)[0]
 
-    input_size = common.input_size(interpreter)
+    #TODO check if correct
+    width, height = common.input_size(interpreter)
     feature_dim = classify.num_classes(interpreter)
     embeddings = np.empty((nb_data, feature_dim), dtype=np.float32)
     for idx, data in enumerate(data_array):
-      infer.set_input(interpreter, data.reshape(4,16,1))
+      infer.set_input(interpreter, data.reshape(width,height,1))
       interpreter.invoke()
       embeddings[idx, :] = classify.get_scores(interpreter)
     return embeddings
@@ -110,8 +111,8 @@ def train_model(extractor_path, X_train, y_train, add_to_model_name=""):
         f.write(model.serialize_model(extractor_path))
     print('Model %s saved.' % out_model_path)
 
-def fine_tune_model(subject, session, compression_method):
-    model_name = "emager_%s_%s_%s_ondevice_edgetpu"%(subject, session, compression_method)
+def fine_tune_model(dataset, subject, session, compression_method, residual_bits):
+    model_name = "%s_%s_%s_%s_%sbits_ondevice_edgetpu"%(dataset, subject, session, compression_method, residual_bits)
 
     test_session = "002" if session == "001" else "001"
 
@@ -127,16 +128,19 @@ def fine_tune_model(subject, session, compression_method):
         fine_tuning_range = range(i*2, i*2+2)
         fine_tune_data = processed_data[:,fine_tuning_range,:,:]
         X, y = dp.extract_with_labels(fine_tune_data)
-        X = dp.compress_data(X, method=compression_method)
+        X = dp.compress_data(X, compression_method, residual_bits)
         y = np.array(y, dtype=np.uint8)
         add_to_model_name = "_tuned_%s_%s"%(fine_tuning_range[0], fine_tuning_range[-1])
         train_model(model_path, X, y, add_to_model_name)
 
 
 if __name__ == "__main__":
+    dataset = "emager"
     subject = "012"
     sessions = ["001","002"]
     compressed_methods = ["minmax", "msb", "smart", "root"]
+    residual_bits = [4,5,6,7,8]
     for compression in compressed_methods:
         for session in sessions:
-            fine_tune_model(subject, session, compression)
+            for bits in residual_bits:
+                fine_tune_model(dataset, subject, session, compression, bits)
