@@ -8,7 +8,6 @@ def filter_utility(data, fs=1000, Q=30, notch_freq=60):
     b_notch, a_notch = signal.iirnotch(notch_freq, Q, fs)
     return signal.filtfilt(b_notch, a_notch, data, axis=0)
 
-
 def extract_with_labels(data_array):
     """
     Given a data array, it will extract the data and labels from the array.

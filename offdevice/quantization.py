@@ -1,7 +1,4 @@
 import numpy as np
-import save_dataset as sd
-import data_processing as dp
-import pandas as pd
 
 
 def normalize_min_max_c(data, bits):
@@ -38,7 +35,6 @@ def naive_bitshift_cd(data, bits):
     tmp_data = np.round(data).astype(np.uint16)
     shift = 16 - bits
     return (tmp_data >> shift) << shift
-
 
 def naive_bitshift_c(data, bits):
     """
@@ -80,9 +76,6 @@ def smart_bitshift_c(data, bits, msb_shift):
 
 
 def smart_bitshift_d(data, bits, msb_shift):
-    """
-    
-    """
     return data.astype(np.uint16) << (16 - bits - msb_shift)
 
 
