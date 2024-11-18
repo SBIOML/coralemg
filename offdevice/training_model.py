@@ -82,6 +82,7 @@ def fine_tune_model(dataset, dataset_path, folder_model_path, tuned_name):
     subject = tuned_name.split("_")[1]
     session = tuned_name.split("_")[2]
     compressed_method = tuned_name.split("_")[3]
+    nb_bits = tuned_name.split("_")[4]
 
     fine_tuning_session = "2" if session == "1" else "1"
 
@@ -119,7 +120,7 @@ def fine_tune_model(dataset, dataset_path, folder_model_path, tuned_name):
 
         fine_tuning_data = averages_data[:,fine_tuning_range,:,:]
         testing_data = averages_data[:,testing_range,:,:]
-        train_dataset, test_dataset = create_tuning_dataset(dataset, fine_tuning_data, testing_data, compressed_method, BATCH_SIZE)
+        train_dataset, test_dataset = create_tuning_dataset(dataset, fine_tuning_data, testing_data, compressed_method, nb_bits, BATCH_SIZE)
 
         history = model.fit(train_dataset,
                             epochs=10,
@@ -162,14 +163,14 @@ def create_training_dataset(dataset, dataset_path, subject="00", session="1", co
 
     return train_dataset, test_dataset
 
-def create_tuning_dataset(dataset, finetuning_data, testing_data, compression_method, batch_size=64):
+def create_tuning_dataset(dataset, finetuning_data, testing_data, compression_method, nb_bits, batch_size=64):
     X_train, y_train = dp.extract_with_labels(finetuning_data)
     X_test, y_test = dp.extract_with_labels(testing_data)
 
-    X_train = dp.compress_data(X_train, method=compression_method)
+    X_train = dp.compress_data(X_train, method=compression_method, residual_bits=nb_bits)
     X_train = X_train.astype('float32').reshape(-1,dataset.sensors_dim[0],dataset.sensors_dim[1],1)
 
-    X_test = dp.compress_data(X_test, method=compression_method)
+    X_test = dp.compress_data(X_test, method=compression_method, residual_bits=nb_bits)
     X_test = X_test.astype('float32').reshape(-1,dataset.sensors_dim[0],dataset.sensors_dim[1],1)
 
     y_train = np.array(y_train, dtype=np.uint8)
@@ -218,7 +219,7 @@ def train_all_subjects(dataset, model_name, dataset_path, subjects, compression_
                     session = str(j+1)
                     train_model(dataset, model_name, data_path_compressed, subject, session, compression, bit)
 
-def finetune_all_subjects(dataset, model_name, dataset_path, subjects, folder_model_path, compression_methods):
+def finetune_all_subjects(dataset, dataset_name, model_name, dataset_path, subjects, folder_model_path, compression_methods):
     for subject in subjects:
         for j in range(2):
             for compression in compression_methods:
@@ -229,15 +230,15 @@ def finetune_all_subjects(dataset, model_name, dataset_path, subjects, folder_mo
 
 if __name__ == "__main__":
 
-    # Emager = dtdef.EmagerDataset()
-    # dataset_name = Emager.name
-    # subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
-    # model_name = "cnn"
-    # train_dataset_path= 'dataset/train/%s/'%(dataset_name)
-    # #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
-    # compression_methods = ["minmax", "msb", "smart", "root"]
-    # bits = [4,5,6,7,8]
-    # train_all_subjects(Emager, model_name, train_dataset_path, subjects, compression_methods, bits)
+    Emager = dtdef.EmagerDataset()
+    dataset_name = Emager.name
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
+    model_name = "cnn"
+    train_dataset_path= 'dataset/train/%s/'%(dataset_name)
+    #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
+    compression_methods = ["minmax", "msb", "smart", "root"]
+    bits = [4,5,6,7,8]
+    train_all_subjects(Emager, model_name, train_dataset_path, subjects, compression_methods, bits)
 
 
     # raw_dataset_path = 'dataset/raw/%s'%(dataset_name)

@@ -53,6 +53,8 @@ def analyze(data, axis=None, centile=98):
 
 def evaluate_accuracy(
     result_path,
+    dataset_name,
+    model_name,
     subjects,
     sessions,
     compression_method,
@@ -63,29 +65,36 @@ def evaluate_accuracy(
     global_accuracy = np.array([])
     global_accuracy_maj = np.array([])
 
+    #TODO Fix
     cm = np.zeros((6, 6))
     cm_maj = np.zeros((6, 6))
     for subject in subjects:
         for session in sessions:
             if fine_tuned:
-                datapath = "%s/emager_%s_%s_%s_%sbits_evaluation_finetuned.npz" % (
+                datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation_finetuned.npz" % (
                     result_path,
+                    dataset_name,
+                    model_name,
                     subject,
                     session,
                     compression_method,
                     bit,
                 )
             elif ondevice:
-                datapath = "%s/emager_%s_%s_%s_%sbits_evaluation_ondevice.npz" % (
+                datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation_ondevice.npz" % (
                     result_path,
+                    dataset_name,
+                    model_name,
                     subject,
                     session,
                     compression_method,
                     bit,
                 )
             else:
-                datapath = "%s/emager_%s_%s_%s_%sbits_evaluation.npz" % (
+                datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation.npz" % (
                     result_path,
+                    dataset_name,
+                    model_name,
                     subject,
                     session,
                     compression_method,
@@ -103,6 +112,7 @@ def evaluate_accuracy(
                 cm += conf_matrix[i]
                 cm_maj += conf_matrix_maj[i]
 
+    print("Dataset : %s" % (dataset_name))
     print("Compressed method: %s" % (compression_method))
     print("Number of bits: %s" % (bit))
     print("Accuracy")
@@ -118,6 +128,7 @@ def evaluate_accuracy(
         "+-",
         "{:.2f}".format(100 * np.std(global_accuracy_maj), "\n"),
     )
+    print("\n")
 
     # #display confusion matrix
     # cm = 100*cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
@@ -130,6 +141,8 @@ def evaluate_accuracy(
 
 def evaluate_time(
     result_path,
+    dataset_name,
+    model_name,
     subjects,
     sessions,
     compression_methods,
@@ -150,24 +163,30 @@ def evaluate_time(
             for compression_method in compression_methods:
                 for bit in bits:
                     if fine_tuned:
-                        datapath = "%s/emager_%s_%s_%s_%sbits_evaluation_finetuned.npz" % (
+                        datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation_finetuned.npz" % (
                             result_path,
+                            dataset_name,
+                            model_name,
                             subject,
                             session,
                             compression_method,
                             bit
                         )
                     elif ondevice:
-                        datapath = "%s/emager_%s_%s_%s_%sbits_evaluation_ondevice.npz" % (
+                        datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation_ondevice.npz" % (
                             result_path,
+                            dataset_name,
+                            model_name,
                             subject,
                             session,
                             compression_method,
                             bit
                         )
                     else:
-                        datapath = "%s/emager_%s_%s_%s_%s_bits_evaluation.npz" % (
+                        datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation.npz" % (
                             result_path,
+                            dataset_name,
+                            model_name,
                             subject,
                             session,
                             compression_method,
@@ -265,17 +284,23 @@ def evaluate_repartition(dataset_path, subjects, sessions, compressed_methods, b
 
 if __name__ == "__main__":
 
-    subjects = ["000","001","002","003","004","005","006","007","008","009","010","011"]
+    #subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
 
-    sessions = ["001", "002"]
+    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+
+    sessions = ["1", "2"]
     #compression_methods = ["minmax", "msb", "smart", "root"]
 
     # #result_path = "offdevice/ondevice_results"
     result_path = "offdevice/offdevice_results"
+    dataset_name = "capgmyo"
+    model_name = "cnn"
 
-    evaluate_accuracy(
-        result_path, subjects, sessions, "minmax", 6, fine_tuned=False, ondevice=False
-    )
+    bits = [3,4,5,6,7,8]
+    for bit in bits :
+        evaluate_accuracy(
+            result_path, dataset_name, model_name, subjects, sessions, "root", bit, fine_tuned=False, ondevice=False
+        )
     # evaluate_time(
     #     result_path,
     #     subjects,

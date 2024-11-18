@@ -71,34 +71,11 @@ def save_raw_data(dataset, dataset_path, subject, session, save_folder_path="dat
 
 
 if __name__ == "__main__":
-    # Emager = dtdef.EmagerDataset()
-    # dataset_path = "dataset/emager"
-    # subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
-    # sessions = ["1", "2"]
-    # bits = [4,5,6,7,8]
-    # compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
-    # #compressed_methods = ["baseline"]
-
-    # for subject in subjects:
-    #     for session in sessions:
-    #         for compressed_method in compressed_methods:
-    #             for bit in bits:
-    #                 save_training_data(
-    #                     Emager,
-    #                     dataset_path,
-    #                     subject,
-    #                     session,
-    #                     compressed_method=compressed_method,
-    #                     nb_bits=bit,
-    #                     save_folder_path="dataset/train/emager/%s" % (compressed_method),
-    #                 )
-    #         save_raw_data(Emager, dataset_path, subject, session, "dataset/raw/emager/")
-
-    Capgmyo = dtdef.CapgmyoDataset()
-    dataset_path = "dataset/capgmyo"
-    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    Emager = dtdef.EmagerDataset()
+    dataset_path = "dataset/emager"
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
     sessions = ["1", "2"]
-    bits = [4,5,6,7,8]
+    bits = [3,4,5,6,7,8]
     compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
     #compressed_methods = ["baseline"]
 
@@ -107,12 +84,35 @@ if __name__ == "__main__":
             for compressed_method in compressed_methods:
                 for bit in bits:
                     save_training_data(
-                        Capgmyo,
+                        Emager,
                         dataset_path,
                         subject,
                         session,
                         compressed_method=compressed_method,
                         nb_bits=bit,
-                        save_folder_path="dataset/train/capgmyo/%s" % (compressed_method),
+                        save_folder_path="dataset/train/emager/%s" % (compressed_method),
                     )
-            save_raw_data(Capgmyo, dataset_path, subject, session, "dataset/raw/capgmyo/")
+            save_raw_data(Emager, dataset_path, subject, session, "dataset/raw/emager/")
+
+    # Capgmyo = dtdef.CapgmyoDataset()
+    # dataset_path = "dataset/capgmyo"
+    # subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    # sessions = ["1", "2"]
+    # bits = [3,4,5,6,7,8]
+    # compressed_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    # #compressed_methods = ["baseline"]
+
+    # for subject in subjects:
+    #     for session in sessions:
+    #         for compressed_method in compressed_methods:
+    #             for bit in bits:
+    #                 save_training_data(
+    #                     Capgmyo,
+    #                     dataset_path,
+    #                     subject,
+    #                     session,
+    #                     compressed_method=compressed_method,
+    #                     nb_bits=bit,
+    #                     save_folder_path="dataset/train/capgmyo/%s" % (compressed_method),
+    #                 )
+    #         save_raw_data(Capgmyo, dataset_path, subject, session, "dataset/raw/capgmyo/")
