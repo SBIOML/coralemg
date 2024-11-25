@@ -16,7 +16,7 @@ def scheduler(epoch, lr):
   else:
     return lr * tf.math.exp(-0.5)
 
-def train_model(dataset, model_name, dataset_path, subject="00", session="1", compression_mode="minmax", bit=8, nb_class=6):
+def train_model(dataset, model_name, dataset_path, subject="00", session="1", compression_mode="minmax", bit=8):
     '''
     Train the model
 
@@ -26,7 +26,6 @@ def train_model(dataset, model_name, dataset_path, subject="00", session="1", co
     @param subject the subject to use, must be 00, 01, ...
     @param session the session to use, must be 1, 2
     @param compression_mode compression method used
-    @param nb_class the number of class to use    
     '''
     gpu_devices = tf.config.experimental.list_physical_devices("GPU") 
     for device in gpu_devices: 
@@ -79,10 +78,13 @@ def fine_tune_model(dataset, dataset_path, folder_model_path, tuned_name):
     
 
     full_model_path = '%s/%s.h5'%(folder_model_path, tuned_name)
-    subject = tuned_name.split("_")[1]
-    session = tuned_name.split("_")[2]
-    compressed_method = tuned_name.split("_")[3]
-    nb_bits = tuned_name.split("_")[4]
+    print(full_model_path)
+
+    splitted_name = tuned_name.split("_")
+    subject = splitted_name[2]
+    session = splitted_name[3]
+    compressed_method = splitted_name[4]
+    nb_bits = int(splitted_name[5].split("bits")[0])
 
     fine_tuning_session = "2" if session == "1" else "1"
 
@@ -219,43 +221,44 @@ def train_all_subjects(dataset, model_name, dataset_path, subjects, compression_
                     session = str(j+1)
                     train_model(dataset, model_name, data_path_compressed, subject, session, compression, bit)
 
-def finetune_all_subjects(dataset, dataset_name, model_name, dataset_path, subjects, folder_model_path, compression_methods):
+def finetune_all_subjects(dataset, model_name, dataset_path, subjects, folder_model_path, compression_methods, bits):
+    dataset_name = dataset.name
     for subject in subjects:
         for j in range(2):
             for compression in compression_methods:
                 for bit in bits:
                     session = str(j+1)
                     tuned_name = "%s_%s_%s_%s_%s_%sbits"%(dataset_name, model_name, subject, session, compression, bit)
-                    fine_tune_model(dataset, dataset_path, folder_model_path, tuned_name, bit)
+                    fine_tune_model(dataset, dataset_path, folder_model_path, tuned_name)
 
 if __name__ == "__main__":
 
-    Emager = dtdef.EmagerDataset()
-    dataset_name = Emager.name
+    dataset = dtdef.EmagerDataset()
+    dataset_name = dataset.name
     subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
     model_name = "cnn"
     train_dataset_path= 'dataset/train/%s/'%(dataset_name)
     #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
     compression_methods = ["minmax", "msb", "smart", "root"]
-    bits = [4,5,6,7,8]
-    train_all_subjects(Emager, model_name, train_dataset_path, subjects, compression_methods, bits)
+    bits = [1,2,3,4,5,6,7,8]
+    train_all_subjects(dataset, model_name, train_dataset_path, subjects, compression_methods, bits)
 
 
-    # raw_dataset_path = 'dataset/raw/%s'%(dataset_name)
-    # folder_model_path = 'offdevice/model'
-    # finetune_all_subjects(raw_dataset_path, folder_model_path, compression_methods, bits)
+    raw_dataset_path = 'dataset/raw/%s'%(dataset_name)
+    folder_model_path = 'offdevice/model'
+    finetune_all_subjects(dataset, model_name, raw_dataset_path, subjects, folder_model_path, compression_methods, bits)
 
-    Capgmyo = dtdef.CapgmyoDataset()
-    dataset_name = Capgmyo.name
+    dataset = dtdef.CapgmyoDataset()
+    dataset_name = dataset.name
     subjects = ["01","02","03","04","05","06","07","08","09","10"]
     model_name = "cnn"
     train_dataset_path= 'dataset/train/%s/'%(dataset_name)
     #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
     compression_methods = ["minmax", "msb", "smart", "root"]
-    bits = [4,5,6,7,8]
-    train_all_subjects(Capgmyo, model_name, train_dataset_path, subjects, compression_methods, bits)
+    bits = [1,2,3,4,5,6,7,8]
+    train_all_subjects(dataset, model_name, train_dataset_path, subjects, compression_methods, bits)
 
 
-    # raw_dataset_path = 'dataset/raw/%s'%(dataset_name)
-    # folder_model_path = 'offdevice/model'
-    # finetune_all_subjects(raw_dataset_path, folder_model_path, compression_methods, bits)
+    raw_dataset_path = 'dataset/raw/%s'%(dataset_name)
+    folder_model_path = 'offdevice/model'
+    finetune_all_subjects(dataset, model_name, raw_dataset_path, subjects, folder_model_path, compression_methods, bits)

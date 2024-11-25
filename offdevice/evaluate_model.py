@@ -3,6 +3,7 @@ import numpy as np
 import tensorflow as tf
 import data_processing as dp
 import sklearn.metrics as metrics
+import dataset_definition as dtdef
 
 
 def create_processed_data(raw_dataset_path, data_range, time_length=25):
@@ -15,7 +16,7 @@ def create_processed_data(raw_dataset_path, data_range, time_length=25):
     y = np.array(y, dtype=np.uint8)
     return X, y
 
-def evaluate_raw_model(model_path, dataset_path, model_name):
+def evaluate_raw_model(dataset, model_path, dataset_path, model_name):
     BATCH_SIZE = 64
 
     model_path = '%s/%s.h5'%(model_path, model_name)
@@ -24,11 +25,10 @@ def evaluate_raw_model(model_path, dataset_path, model_name):
     with np.load(dataset_path) as data:
         test_examples = data['data']
         test_labels = data['label']
-
-    data_dim = np.shape(test_examples)
     
-    #TODO Fix
-    test_examples = test_examples.astype('float32').reshape(-1,4,16,1)
+    line_dim = dataset.sensors_dim[0]
+    column_dim = dataset.sensors_dim[1]
+    test_examples = test_examples.astype('float32').reshape(-1,line_dim,column_dim,1)
 
     test_dataset = tf.data.Dataset.from_tensor_slices(test_examples)
     test_dataset = test_dataset.batch(BATCH_SIZE)
@@ -43,13 +43,14 @@ def evaluate_raw_model(model_path, dataset_path, model_name):
 
     print("Raw model accuracy: {:.3%}".format(keras_accuracy.result()))
 
-def evaluate_tflite_model(model_path, dataset_path, tflite_model_name):
+def evaluate_tflite_model(dataset, model_path, dataset_path, tflite_model_name):
     with np.load(dataset_path) as data:
         test_examples = data['data']
         test_labels = data['label']
 
-    #TODO Fix
-    test_examples = test_examples.astype(np.uint8).reshape(-1,4,16,1)
+    line_dim = dataset.sensors_dim[0]
+    column_dim = dataset.sensors_dim[1]
+    test_examples = test_examples.astype(np.uint8).reshape(-1,line_dim,column_dim,1)
     data = test_examples[:,:,:,:]
     
     model_path = '%s/%s.tflite'%(model_path, tflite_model_name)
@@ -71,10 +72,12 @@ def evaluate_tflite_model(model_path, dataset_path, tflite_model_name):
     tflite_accuracy(prediction, test_labels)
     print("Quant TF Lite accuracy: {:.3%}".format(tflite_accuracy.result()))
 
-def test_model_performance(model_path, raw_dataset_path, result_path, dataset_name, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150):
+def test_model_performance(dataset, model_path, raw_dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150):
     BATCH_SIZE = 64
     if not os.path.exists(result_path):
         os.makedirs(result_path)
+
+    dataset_name = dataset.name
 
     model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset_name, model_name, subject, session, compression_method, bit)
     test_session = "2" if session == "1" else "1"    
@@ -99,8 +102,9 @@ def test_model_performance(model_path, raw_dataset_path, result_path, dataset_na
         X_test, y_test = create_processed_data(dataset_path, testing_range)
         X_test = dp.compress_data(X_test, method=compression_method, residual_bits=bit) 
 
-        #TODO Fix
-        X_test = X_test.astype('float32').reshape(-1,4,16,1)
+        line_dim = dataset.sensors_dim[0]
+        column_dim = dataset.sensors_dim[1]
+        X_test = X_test.astype('float32').reshape(-1,line_dim,column_dim,1)
         nb_votes = int(np.floor(vote_length/time_length))
 
         y_true = y_test
@@ -146,31 +150,14 @@ if __name__ == '__main__':
     # evaluate_raw_model(folder_path, dataset_path, model_name)
     # evaluate_tflite_model(tflite_path, dataset_path, model_name_tflite)
 
-    # dataset_name = "emager"
-    # model_name = "cnn"
-    # subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
-    # sessions = ["1", "2"]
-    # #compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
-    # compression_methods = ["minmax", "msb", "smart", "root"]
-    # bits = [3,4,5,6,7,8]
-
-    # model_path = "offdevice/model"
-    # dataset_path = "dataset/raw/%s"%(dataset_name)
-    # result_path = "offdevice/offdevice_results"
-    # for subject in subjects:
-    #     for session in sessions:
-    #         for compression_method in compression_methods:
-    #             for bit in bits:
-    #                 test_model_performance(model_path, dataset_path, result_path, dataset_name, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
-
-
-    dataset_name = "capgmyo"
+    dataset = dtdef.EmagerDataset()
+    dataset_name = dataset.name
     model_name = "cnn"
-    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
     sessions = ["1", "2"]
     #compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
     compression_methods = ["minmax", "msb", "smart", "root"]
-    bits = [3,4,5,6,7,8]
+    bits = [1,2,3,4,5,6,7,8]
 
     model_path = "offdevice/model"
     dataset_path = "dataset/raw/%s"%(dataset_name)
@@ -179,5 +166,24 @@ if __name__ == '__main__':
         for session in sessions:
             for compression_method in compression_methods:
                 for bit in bits:
-                    test_model_performance(model_path, dataset_path, result_path, dataset_name, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
+
+
+    dataset = dtdef.CapgmyoDataset()
+    dataset_name = dataset.name
+    model_name = "cnn"
+    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    sessions = ["1", "2"]
+    #compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    compression_methods = ["minmax", "msb", "smart", "root"]
+    bits = [1,2,3,4,5,6,7,8]
+
+    model_path = "offdevice/model"
+    dataset_path = "dataset/raw/%s"%(dataset_name)
+    result_path = "offdevice/offdevice_results"
+    for subject in subjects:
+        for session in sessions:
+            for compression_method in compression_methods:
+                for bit in bits:
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
 

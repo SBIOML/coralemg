@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
-
+import dataset_definition as dtdef
 
 def histogram(data_df: pd.DataFrame, xlim=1200):
     """
@@ -52,8 +52,8 @@ def analyze(data, axis=None, centile=98):
 
 
 def evaluate_accuracy(
+    dataset,
     result_path,
-    dataset_name,
     model_name,
     subjects,
     sessions,
@@ -65,9 +65,11 @@ def evaluate_accuracy(
     global_accuracy = np.array([])
     global_accuracy_maj = np.array([])
 
-    #TODO Fix
-    cm = np.zeros((6, 6))
-    cm_maj = np.zeros((6, 6))
+    dataset_name = dataset.name
+    nb_class = dataset.nb_class
+
+    cm = np.zeros((nb_class, nb_class))
+    cm_maj = np.zeros((nb_class, nb_class))
     for subject in subjects:
         for session in sessions:
             if fine_tuned:
@@ -140,8 +142,8 @@ def evaluate_accuracy(
 
 
 def evaluate_time(
+    dataset,
     result_path,
-    dataset_name,
     model_name,
     subjects,
     sessions,
@@ -150,6 +152,8 @@ def evaluate_time(
     fine_tuned=False,
     ondevice=False,
 ):
+    dataset_name = dataset.name
+
     if "offdevice" in result_path:
         print("Offdevice results not compatible with time evaluation")
         return
@@ -278,7 +282,7 @@ def evaluate_repartition(dataset_path, subjects, sessions, compressed_methods, b
         plt.ylabel("Density", fontsize=14)
         plt.grid(alpha=0.3)
     plt.legend(["Original", "Min-Max", "Right Shift", "Smart-3", "Root-3"])
-    plt.savefig("histogram_quant.png")
+    #plt.savefig("histogram_quant.png")
     plt.show()
 
 
@@ -293,15 +297,18 @@ if __name__ == "__main__":
 
     # #result_path = "offdevice/ondevice_results"
     result_path = "offdevice/offdevice_results"
-    dataset_name = "capgmyo"
+    #dataset = dtdef.EmagerDataset()
+    dataset = dtdef.CapgmyoDataset()
     model_name = "cnn"
 
-    bits = [3,4,5,6,7,8]
+    bits = [1,2,3,4,5,6,7,8]
     for bit in bits :
         evaluate_accuracy(
-            result_path, dataset_name, model_name, subjects, sessions, "root", bit, fine_tuned=False, ondevice=False
+            dataset, result_path, model_name, subjects, sessions, "minmax", bit, fine_tuned=True, ondevice=False
         )
+
     # evaluate_time(
+    #     dataset,
     #     result_path,
     #     subjects,
     #     sessions,
@@ -310,7 +317,7 @@ if __name__ == "__main__":
     #     ondevice=True,
     # )
 
-    # compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
-    # dataset_path = "dataset/train/"
-    # sessions = ["001", "002"]
-    # evaluate_repartition(dataset_path, subjects, sessions, compression_methods, 7)
+    compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
+    dataset_path = "dataset/train/emager/"
+    sessions = ["1", "2"]
+    evaluate_repartition(dataset_path, subjects, sessions, compression_methods, 6)
