@@ -5,7 +5,6 @@ import fnmatch
 import numpy as np
 import scipy.io as sio
 from collections import Counter
-import data_processing as dp
 
 class EmgDataset(ABC):
     def __init__(self):

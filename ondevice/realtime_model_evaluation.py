@@ -182,8 +182,8 @@ def inference_process(queue, model_path, compression_method, residual_bits, vote
     queue.put(maj_vote_time)
     queue.put(total_process_time)
 
-def model_evaluation(dataset, subject, session, compression_method, residual_bits, fine_tuned=False, on_device=False, debug=False):
-    model_name = "%s_%s_%s_%s_%sbits"%(dataset, subject, session, compression_method, residual_bits)
+def model_evaluation(dataset, model_name, subject, session, compression_method, residual_bits, fine_tuned=False, on_device=False, debug=False):
+    model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset, model_name, subject, session, compression_method, residual_bits)
 
     test_session = "002" if session == "001" else "001"
 
