@@ -143,12 +143,14 @@ def test_model_performance(dataset, model_path, raw_dataset_path, result_path, m
 if __name__ == '__main__':
     # folder_path = "offdevice/model/"
     # tflite_path = "offdevice/model/tflite/normal/"
-    # model_name = "emager_001_002_root"
-    # model_name_tflite = "emager_010_002_root"
-    # dataset_path = "dataset/train/root/010_001_root.npz"
+    # model_name = "emager_cnn_01_1_smart_5bits"
+    # model_name_tflite = "emager_cnn_01_1_smart_5bits"
+    # dataset_path = "dataset/train/emager/smart/01_1_smart_5bits.npz"
 
-    # evaluate_raw_model(folder_path, dataset_path, model_name)
-    # evaluate_tflite_model(tflite_path, dataset_path, model_name_tflite)
+    # dataset = dtdef.EmagerDataset()
+
+    # evaluate_raw_model(dataset, folder_path, dataset_path, model_name)
+    # evaluate_tflite_model(dataset, tflite_path, dataset_path, model_name_tflite)
 
     dataset = dtdef.EmagerDataset()
     dataset_name = dataset.name
