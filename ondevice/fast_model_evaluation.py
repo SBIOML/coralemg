@@ -68,6 +68,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
         for x_sample in X_test:
             reshaped_data = x_sample.reshape(height,width,1)
             vote = infer.make_inference(interpreter, reshaped_data, False)
+            y_pred.append(vote)
             votes_arr[curr_vote] = vote
             if (curr_vote+1 == nb_votes):
                 majority_vote = np.argmax(np.bincount(votes_arr))
