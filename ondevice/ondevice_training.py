@@ -11,39 +11,6 @@ from pycoral.adapters import common
 from pycoral.learn.backprop.softmax_regression import SoftmaxRegression
 import tpu_inference as infer
 
-def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60):
-    """
-    Given a data array, it will preprocess the data by applying the desired operations.
-
-    @param data: the data array to be processed, the data array has the format (nb_gesture, nb_repetition, time_length, num_channels)
-    @param window_length the length of the time window to use
-    @param fs the sampling frequency of the data
-    @param Q the quality factor of the notch filter
-    @param notch_freq the frequency of the notch filter
-
-    @return the processed data array
-    """
-    labels, nb_exp, total_time_length, nb_channels = np.shape(data_array)
-
-    nb_window = int(np.floor(total_time_length / window_length))
-    output_data = np.zeros((labels, nb_exp, nb_window, nb_channels))
-
-    for label in range(labels):
-        for experiment in range(nb_exp):
-            for curr_window in range(nb_window):
-                start = curr_window * window_length
-                end = (curr_window + 1) * window_length
-                processed_data = data_array[label, experiment, start:end, :]
-                processed_data = dp.filter_utility(
-                    processed_data, fs=fs, Q=Q, notch_freq=notch_freq
-                )
-                processed_data = np.mean(
-                    np.absolute(processed_data - np.mean(processed_data, axis=0)),
-                    axis=0,
-                )
-                output_data[label, experiment, curr_window, :] = processed_data
-    return output_data
-
 def extract_embeddings(data_array, interpreter):
     """
     Extract model embeddings from data array.
@@ -112,7 +79,8 @@ def train_model(extractor_path, X_train, y_train, add_to_model_name=""):
     print('Model %s saved.' % out_model_path)
 
 def fine_tune_model(dataset, subject, session, compression_method, residual_bits):
-    model_name = "%s_%s_%s_%s_%sbits_ondevice_edgetpu"%(dataset, subject, session, compression_method, residual_bits)
+    #TODO model_type
+    model_name = "%s_%s_%s_%s_%sbits_ondevice_edgetpu"%(dataset.name, subject, session, compression_method, residual_bits)
 
     test_session = "002" if session == "001" else "001"
 
@@ -122,7 +90,7 @@ def fine_tune_model(dataset, subject, session, compression_method, residual_bits
 
     with np.load(dataset_path) as data:
         raw_data = data['data']
-    processed_data = preprocess_data(raw_data)
+    processed_data = dp.preprocess_data(raw_data, filtering_utility=not dataset.utility_filtered)
 
     for i in range(5):
         fine_tuning_range = range(i*2, i*2+2)

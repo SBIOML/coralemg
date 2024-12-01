@@ -9,12 +9,12 @@ from pycoral.adapters import common
 _TIME_LENGTH = const(25)
 _VOTE_LENGTH = const(150)
 
-def create_processed_data(raw_dataset_path, data_range, time_length=25):
+def create_processed_data(dataset, raw_dataset_path, data_range, time_length=25):
     with np.load(raw_dataset_path) as data:
         raw_data = data['data']
 
     raw_data = raw_data[:,data_range,:,:]
-    raw_data = dp.preprocess_data(raw_data, window_length=time_length)
+    raw_data = dp.preprocess_data(raw_data, window_length=time_length, filtering_utility=not dataset.utility_filtered)
     X, y = dp.extract_with_labels(raw_data)
     y = np.array(y, dtype=np.uint8)
     return X, y

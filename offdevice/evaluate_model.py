@@ -6,12 +6,12 @@ import sklearn.metrics as metrics
 import dataset_definition as dtdef
 
 
-def create_processed_data(raw_dataset_path, data_range, time_length=25):
+def create_processed_data(dataset, raw_dataset_path, data_range, time_length=25):
     with np.load(raw_dataset_path) as data:
         raw_data = data['data']
 
     raw_data = raw_data[:,data_range,:,:]
-    raw_data = dp.preprocess_data(raw_data, window_length=time_length)
+    raw_data = dp.preprocess_data(raw_data, window_length=time_length, filtering_utility=not dataset.utility_filtered)
     X, y = dp.extract_with_labels(raw_data)
     y = np.array(y, dtype=np.uint8)
     return X, y
@@ -99,7 +99,7 @@ def test_model_performance(dataset, model_path, raw_dataset_path, result_path, m
             running_model_name = model_name
             current_model_path = '%s/%s.h5'%(model_path, running_model_name)
         testing_range = list(set(range(10)) - set(fine_tuning_range))
-        X_test, y_test = create_processed_data(dataset_path, testing_range)
+        X_test, y_test = create_processed_data(dataset, dataset_path, testing_range)
         X_test = dp.compress_data(X_test, method=compression_method, residual_bits=bit) 
 
         line_dim = dataset.sensors_dim[0]
