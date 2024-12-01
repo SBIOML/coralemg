@@ -45,7 +45,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
         model_path = "/home/mendel/model/%s_edgetpu.tflite"%(running_model_name)
         #get all the rest of the range for testing from  0 to 9
         testing_range = list(set(range(10)) - set(fine_tuning_range))
-        X_test, y_test = create_processed_data(dataset_path, testing_range)
+        X_test, y_test = create_processed_data(dataset, dataset_path, testing_range)
         X_test = dp.compress_data(X_test, method=compression_method, residual_bits=residual_bits) 
 
         # Get majority vote for y in the time window
