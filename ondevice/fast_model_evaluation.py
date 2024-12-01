@@ -22,7 +22,7 @@ def create_processed_data(raw_dataset_path, data_range, time_length=25):
 def model_evaluation(dataset, model_name, subject, session, compression_method, residual_bits, fine_tuned=False, on_device=False, debug=False):
     model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset.name, model_name, subject, session, compression_method, residual_bits)
 
-    test_session = "002" if session == "001" else "001"
+    test_session = "2" if session == "1" else "1"
 
     # Create data
     dataset_path = "/home/mendel/dataset/%s/%s_%s_raw.npz"%(dataset.name, subject, test_session)
