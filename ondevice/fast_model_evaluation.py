@@ -32,6 +32,9 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
     confusion_list = []
     confusion_list_maj = []
 
+    line_dim = dataset.sensors_dim[0]
+    column_dim = dataset.sensors_dim[1]
+
     for i in range(5):
         # Create a range of 2 values to select fine tuning data based on i [0,1]; [2,3] ...
         fine_tuning_range = range(i*2, i*2+2)
@@ -46,7 +49,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
         #get all the rest of the range for testing from  0 to 9
         testing_range = list(set(range(10)) - set(fine_tuning_range))
         X_test, y_test = create_processed_data(dataset, dataset_path, testing_range)
-        X_test = dp.compress_data(X_test, method=compression_method, residual_bits=residual_bits) 
+        X_test = dp.compress_data(X_test, method=compression_method, residual_bits=residual_bits).reshape(-1,line_dim,column_dim,1)
 
         # Get majority vote for y in the time window
         nb_votes = int(np.floor(_VOTE_LENGTH/_TIME_LENGTH))
@@ -59,6 +62,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
         interpreter = infer.make_interpreter(model_path)
         #TODO check if correct
         width, height = common.input_size(interpreter)
+        print(width, height)
         interpreter.allocate_tensors()
 
         curr_vote = 0
