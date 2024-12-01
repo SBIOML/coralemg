@@ -57,6 +57,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
 
         y_true = y_test
         y_true_maj = np.array([np.argmax(np.bincount(y_true[i:i+nb_votes])) for i in range(0, len(y_true), nb_votes)])
+        y_pred = []
         y_pred_maj = []
 
         interpreter = infer.make_interpreter(model_path)
