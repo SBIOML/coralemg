@@ -104,8 +104,8 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
     
 if __name__ == '__main__':
     dataset = dtdef.EmagerDataset()
-    #compression_methods = ["minmax", "msb", "smart", "root"]
-    compression_methods = "minmax"
+    compression_methods = ["minmax", "msb", "smart", "root"]
+    #compression_methods = "minmax"
     subject = "00"
     model_name = "cnn"
     sessions = ["1","2"]
