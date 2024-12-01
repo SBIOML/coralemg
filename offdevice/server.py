@@ -75,7 +75,7 @@ def send_model_to_coral(dataset_name, model_type, subject, session, model_tuning
 if __name__ == '__main__':
     #Open a text file to get the ip address of the coral
 
-    subject = "00"
+    subject = "01"
     sessions = ["1", "2"]
     compressed_methods = ["minmax", "msb", "smart", "root"]
     bits = [1,2,3,4,5,6,7,8]

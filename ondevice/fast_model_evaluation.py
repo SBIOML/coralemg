@@ -111,7 +111,7 @@ if __name__ == '__main__':
     dataset = dtdef.EmagerDataset()
     compression_methods = ["minmax", "msb", "smart", "root"]
     #compression_methods = "minmax"
-    subject = "00"
+    subject = "01"
     model_name = "cnn"
     sessions = ["1","2"]
     residual_bits = [1,2,3,4,5,6,7,8]

@@ -169,6 +169,7 @@ if __name__ == '__main__':
             for compression_method in compression_methods:
                 for bit in bits:
                     test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=True, time_length=25, vote_length=150)
 
 
     dataset = dtdef.CapgmyoDataset()
@@ -188,4 +189,5 @@ if __name__ == '__main__':
             for compression_method in compression_methods:
                 for bit in bits:
                     test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=True, time_length=25, vote_length=150)
 
