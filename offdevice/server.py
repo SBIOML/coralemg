@@ -83,8 +83,7 @@ if __name__ == '__main__':
     dataset_name = "emager"
 
     for session in sessions:
-        pass
-        #send_raw_data_to_coral(dataset_name, subject, session)
+        send_raw_data_to_coral(dataset_name, subject, session)
     for compression in compressed_methods:
         for session in sessions:
             for bit in bits:
