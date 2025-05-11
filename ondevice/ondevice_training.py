@@ -78,11 +78,11 @@ def train_model(extractor_path, X_train, y_train, add_to_model_name=""):
         f.write(model.serialize_model(extractor_path))
     print('Model %s saved.' % out_model_path)
 
-def fine_tune_model(dataset, subject, session, compression_method, residual_bits):
+def fine_tune_model(dataset, model_type, subject, session, compression_method, residual_bits):
     #TODO model_type
-    model_name = "%s_%s_%s_%s_%sbits_ondevice_edgetpu"%(dataset.name, subject, session, compression_method, residual_bits)
+    model_name = "%s_%s_%s_%s_%s_%sbits_ondevice_edgetpu"%(dataset.name, model_type, subject, session, compression_method, residual_bits)
 
-    test_session = "002" if session == "001" else "001"
+    test_session = "2" if session == "1" else "1"
 
     # Create data
     dataset_path = "/home/mendel/dataset/%s_%s_raw.npz"%(subject, test_session)
@@ -104,10 +104,10 @@ def fine_tune_model(dataset, subject, session, compression_method, residual_bits
 
 if __name__ == "__main__":
     dataset = "emager"
-    subject = "012"
-    sessions = ["001","002"]
+    subject = "01"
+    sessions = ["1","2"]
     compressed_methods = ["minmax", "msb", "smart", "root"]
-    residual_bits = [4,5,6,7,8]
+    residual_bits = [1,2,3,4,5,6,7,8]
     for compression in compressed_methods:
         for session in sessions:
             for bits in residual_bits:
