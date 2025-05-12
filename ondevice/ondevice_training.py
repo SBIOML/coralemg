@@ -5,6 +5,7 @@ import sys
 import time
 import numpy as np
 import data_processing as dp
+import dataset_definition as dtdef
 
 from pycoral.adapters import classify
 from pycoral.adapters import common
@@ -103,7 +104,7 @@ def fine_tune_model(dataset, model_type, subject, session, compression_method, r
 
 
 if __name__ == "__main__":
-    dataset = "emager"
+    dataset = dtdef.EmagerDataset()
     model_type = "cnn"
     subject = "01"
     sessions = ["1","2"]
