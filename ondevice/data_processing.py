@@ -1,10 +1,15 @@
+import sys
 import numpy as np
 from scipy import signal
 import quantization as compress
 
 
 def filter_utility(data, fs=1000, Q=30, notch_freq=60):
-    b_notch, a_notch = signal.iirnotch(notch_freq, Q, fs)
+    if sys.version_info[1] == 7:
+        w0 = notch_freq/(fs/2)
+        b_notch, a_notch = signal.iirnotch(w0, Q)
+    else :
+        b_notch, a_notch = signal.iirnotch(notch_freq, Q, fs)
     return signal.filtfilt(b_notch, a_notch, data, axis=0)
 
 def extract_with_labels(data_array):
