@@ -28,7 +28,7 @@ def extract_embeddings(data_array, interpreter):
     feature_dim = classify.num_classes(interpreter)
     embeddings = np.empty((nb_data, feature_dim), dtype=np.float32)
     for idx, data in enumerate(data_array):
-      infer.set_input(interpreter, data.reshape(width,height,1))
+      infer.set_input(interpreter, data.reshape(height,width,1))
       interpreter.invoke()
       embeddings[idx, :] = classify.get_scores(interpreter)
     return embeddings
