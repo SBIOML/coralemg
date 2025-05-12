@@ -104,6 +104,7 @@ def fine_tune_model(dataset, model_type, subject, session, compression_method, r
 
 if __name__ == "__main__":
     dataset = "emager"
+    model_type = "cnn"
     subject = "01"
     sessions = ["1","2"]
     compressed_methods = ["minmax", "msb", "smart", "root"]
@@ -111,4 +112,4 @@ if __name__ == "__main__":
     for compression in compressed_methods:
         for session in sessions:
             for bits in residual_bits:
-                fine_tune_model(dataset, subject, session, compression, bits)
+                fine_tune_model(dataset, model_type, subject, session, compression, bits)
