@@ -86,7 +86,7 @@ def fine_tune_model(dataset, model_type, subject, session, compression_method, r
     test_session = "2" if session == "1" else "1"
 
     # Create data
-    dataset_path = "/home/mendel/dataset/%s_%s_raw.npz"%(subject, test_session)
+    dataset_path = "/home/mendel/dataset/%s/%s_%s_raw.npz"%(dataset.name, subject, test_session)
     model_path = "/home/mendel/model/%s.tflite"%(model_name)
 
     with np.load(dataset_path) as data:
