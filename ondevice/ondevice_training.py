@@ -104,7 +104,7 @@ def fine_tune_model(dataset, model_type, subject, session, compression_method, r
 
 
 if __name__ == "__main__":
-    dataset = dtdef.EmagerDataset()
+    dataset = dtdef.CapgmyoDataset()
     model_type = "cnn"
     subject = "01"
     sessions = ["1","2"]

@@ -59,19 +59,17 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
         y_true_maj = np.array([np.argmax(np.bincount(y_true[i:i+nb_votes])) for i in range(0, len(y_true), nb_votes)])
         y_pred = []
         y_pred_maj = []
-
         interpreter = infer.make_interpreter(model_path)
         #TODO check if correct
         width, height = common.input_size(interpreter)
         interpreter.allocate_tensors()
-
         curr_vote = 0
-        for x_sample in X_test:
+        for sample_nb, x_sample in enumerate(X_test):
             reshaped_data = x_sample.reshape(height,width,1)
             vote = infer.make_inference(interpreter, reshaped_data, False)
             y_pred.append(vote)
             votes_arr[curr_vote] = vote
-            if (curr_vote+1 == nb_votes):
+            if (curr_vote+1 == nb_votes) or (sample_nb == len(X_test)-1):
                 majority_vote = np.argmax(np.bincount(votes_arr))
                 y_pred_maj.append(majority_vote)
             curr_vote = (curr_vote+1)%nb_votes
@@ -108,9 +106,9 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
              confusion_matrix=np.array(confusion_list), confusion_matrix_maj=np.array(confusion_list_maj))
     
 if __name__ == '__main__':
-    dataset = dtdef.EmagerDataset()
-    compression_methods = ["minmax", "msb", "smart", "root"]
-    #compression_methods = "minmax"
+    #dataset = dtdef.EmagerDataset()
+    dataset = dtdef.CapgmyoDataset()
+    compression_methods = ["minmax","msb", "smart","root"]
     subject = "01"
     model_name = "cnn"
     sessions = ["1","2"]
@@ -118,4 +116,5 @@ if __name__ == '__main__':
     for session in sessions:
         for compression_method in compression_methods:
             for residual_bit in residual_bits:
-                model_evaluation(dataset, model_name, subject, session, compression_method, residual_bit, fine_tuned=False, on_device=False, debug=True)
+                model_evaluation(dataset, model_name, subject, session, compression_method, residual_bit, fine_tuned=True, on_device=True, debug=True)
+
