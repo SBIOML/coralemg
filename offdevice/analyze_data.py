@@ -288,9 +288,9 @@ def evaluate_repartition(dataset_path, subjects, sessions, compressed_methods, b
 
 if __name__ == "__main__":
 
-    #subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
 
-    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    #subjects = ["01","02","03","04","05","06","07","08","09","10"]
 
     sessions = ["1", "2"]
     #compression_methods = ["minmax", "msb", "smart", "root"]
@@ -304,7 +304,7 @@ if __name__ == "__main__":
     bits = [1,2,3,4,5,6,7,8]
     for bit in bits :
         evaluate_accuracy(
-            dataset, result_path, model_name, subjects, sessions, "minmax", bit, fine_tuned=True, ondevice=False
+            dataset, result_path, model_name, subjects, sessions, "smart", bit, fine_tuned=False, ondevice=False
         )
 
     # evaluate_time(
@@ -317,7 +317,7 @@ if __name__ == "__main__":
     #     ondevice=True,
     # )
 
-    compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
-    dataset_path = "dataset/train/emager/"
-    sessions = ["1", "2"]
-    evaluate_repartition(dataset_path, subjects, sessions, compression_methods, 6)
+    #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
+    #dataset_path = "dataset/train/emager/"
+    #sessions = ["1", "2"]
+    #evaluate_repartition(dataset_path, subjects, sessions, compression_methods, 6)
