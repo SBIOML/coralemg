@@ -238,8 +238,8 @@ if __name__ == "__main__":
     subjects = ["00","01","02","03","04","05","06","07","08","09","10", "11"]
     model_name = "cnn"
     train_dataset_path= 'dataset/train/%s/'%(dataset_name)
-    #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
-    compression_methods = ["minmax", "msb", "smart", "root"]
+    compression_methods = ["baseline"]
+    #compression_methods = ["minmax", "msb", "smart", "root"]
     bits = [1,2,3,4,5,6,7,8]
     train_all_subjects(dataset, model_name, train_dataset_path, subjects, compression_methods, bits)
 
@@ -253,8 +253,8 @@ if __name__ == "__main__":
     subjects = ["01","02","03","04","05","06","07","08","09","10"]
     model_name = "cnn"
     train_dataset_path= 'dataset/train/%s/'%(dataset_name)
-    #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
-    compression_methods = ["minmax", "msb", "smart", "root"]
+    compression_methods = ["baseline"]
+    #compression_methods = ["minmax", "msb", "smart", "root"]
     bits = [1,2,3,4,5,6,7,8]
     train_all_subjects(dataset, model_name, train_dataset_path, subjects, compression_methods, bits)
 
