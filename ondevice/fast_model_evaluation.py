@@ -109,7 +109,7 @@ if __name__ == '__main__':
     #dataset = dtdef.EmagerDataset()
     dataset = dtdef.CapgmyoDataset()
     compression_methods = ["minmax","msb", "smart","root"]
-    subject = "01"
+    subject = "10"
     model_name = "cnn"
     sessions = ["1","2"]
     residual_bits = [1,2,3,4,5,6,7,8]

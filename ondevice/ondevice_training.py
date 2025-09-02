@@ -106,7 +106,7 @@ def fine_tune_model(dataset, model_type, subject, session, compression_method, r
 if __name__ == "__main__":
     dataset = dtdef.CapgmyoDataset()
     model_type = "cnn"
-    subject = "01"
+    subject = "10"
     sessions = ["1","2"]
     compressed_methods = ["minmax", "msb", "smart", "root"]
     residual_bits = [1,2,3,4,5,6,7,8]
