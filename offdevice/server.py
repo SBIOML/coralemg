@@ -76,11 +76,11 @@ if __name__ == '__main__':
     #Open a text file to get the ip address of the coral
 
     subject = "01"
-    sessions = ["1", "2"]
+    sessions = ["1","2"]
     compressed_methods = ["minmax", "msb", "smart", "root"]
     bits = [1,2,3,4,5,6,7,8]
     model_type = "cnn"
-    dataset_name = "emager"
+    dataset_name = "capgmyo"
 
     for session in sessions:
         send_raw_data_to_coral(dataset_name, subject, session)
@@ -89,9 +89,9 @@ if __name__ == '__main__':
             for bit in bits:
                 for i in range(5):
                     tuning_range = range(i*2, i*2+2)
-                    #send_model_to_coral(subject, session, "tuned", compression, ondevice=False, tuning_range=tuning_range)
-                send_model_to_coral(dataset_name, model_type, subject, session, "normal", compression, bit, ondevice=False)
-                #send_model_to_coral(subject, session, "extractor", compression, ondevice=True)
+                    #send_model_to_coral(dataset_name, model_type, subject, session, "tuned", compression, bit, ondevice=False, tuning_range=tuning_range)
+                #send_model_to_coral(dataset_name, model_type, subject, session, "normal", compression, bit, ondevice=False)
+                send_model_to_coral(dataset_name, model_type, subject, session, "extractor", compression, bit, ondevice=True)
 
     
     #send_model_to_coral("002", "003", "normal", "smart", ondevice=False)

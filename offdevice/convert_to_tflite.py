@@ -96,9 +96,41 @@ if __name__ == '__main__':
     # convert the model
 
     dataset = dtdef.CapgmyoDataset()
+    #dataset = dtdef.EmagerDataset()
     bits = [1,2,3,4,5,6,7,8]
 
     compression_methods = ["minmax", "msb", "smart", "root"]
+
+    # folder_path = "offdevice/model"
+    # model_tuning = "normal"
+    # model_type = "cnn"
+    # for sub in range(1,11):
+    #     for sess in range(2):
+    #         for compression_mode in compression_methods:
+    #             for bit in bits:
+    #                 subject = "0" + str(sub) if sub < 10 else str(sub)
+    #                 session = str(sess+1)
+    #                 model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset.name, model_type, subject, session, compression_mode, bit)
+    #                 tflite_model_name = model_name
+    #                 convert_model_to_tflite(folder_path, model_name, model_tuning, dataset, bit, tflite_model_name)
+
+    # folder_path = "offdevice/model/tuned"
+    # model_tuning = "tuned"
+    # model_type = "cnn"
+    # #for sub in range(12):
+    # for sub in range(1,11):
+    #     subject = "0" + str(sub) if sub < 10 else str(sub)
+    #     for sess in range(2):
+    #         session = str(sess+1)
+    #         for tuning in range(5):
+    #             fine_tuning_range = range(tuning*2, tuning*2+2)
+    #             for compression_mode in compression_methods:
+    #                 for bit in bits:
+    #                     #dataset_path = '/dataset/train/%s/'%(compression_mode)
+    #                     model_name = "%s_%s_%s_%s_%s_%sbits_tuned_%s_%s"%(dataset.name, model_type, subject, session, compression_mode, bit, fine_tuning_range[0], fine_tuning_range[-1])
+    #                     tflite_model_name = model_name
+    #                     convert_model_to_tflite(folder_path, model_name, model_tuning, dataset, bit, tflite_model_name)
+
 
     folder_path = "offdevice/model"
     model_tuning = "normal"
@@ -107,36 +139,9 @@ if __name__ == '__main__':
         for sess in range(2):
             for compression_mode in compression_methods:
                 for bit in bits:
+                    dataset_path = 'dataset/train/%s/'%(compression_mode)
                     subject = "0" + str(sub) if sub < 10 else str(sub)
                     session = str(sess+1)
                     model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset.name, model_type, subject, session, compression_mode, bit)
                     tflite_model_name = model_name
-                    convert_model_to_tflite(folder_path, model_name, model_tuning, dataset, bit, tflite_model_name)
-
-    # folder_path = "offdevice/model/tuned"
-    # model_tuning = "tuned"
-    # model_type = "cnn"
-    # for sub in range(12):
-    #     subject = "0" + str(sub) if sub < 10 else str(sub)
-    #     for sess in range(2):
-    #         session = str(sess+1)
-    #         for tuning in range(5):
-    #             fine_tuning_range = range(tuning*2, tuning*2+2)
-    #             for compression_mode in compression_methods:
-    #                 dataset_path = '/dataset/train/%s/'%(compression_mode)
-    #                 model_name = "%s_%s_%s_%s_%s_%sbits_tuned_%s_%s"%(dataset.name, model_type, subject, session, compression_mode, bit, fine_tuning_range[0], fine_tuning_range[-1])
-    #                 tflite_model_name = model_name
-    #                 convert_model_to_tflite(folder_path, model_name, model_tuning, tflite_model_name)
-
-
-    # folder_path = "offdevice/model"
-    # model_tuning = "normal"
-    # for sub in range(12):
-    #     for sess in range(2):
-    #         for compression_mode in compression_methods:
-    #             dataset_path = 'dataset/train/%s/'%(compression_mode)
-    #             subject = "0" + str(sub) if sub < 10 else str(sub)
-    #             session = str(sess+1)
-    #             model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset.name, model_type, subject, session, compression_mode, bit)
-    #             tflite_model_name = model_name
-    #             convert_extractor_to_tflite(folder_path, model_name, model_tuning, tflite_model_name)
+                    convert_extractor_to_tflite(folder_path, model_name, model_type, dataset, bit, tflite_model_name)

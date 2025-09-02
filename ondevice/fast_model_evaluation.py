@@ -117,4 +117,3 @@ if __name__ == '__main__':
         for compression_method in compression_methods:
             for residual_bit in residual_bits:
                 model_evaluation(dataset, model_name, subject, session, compression_method, residual_bit, fine_tuned=True, on_device=True, debug=True)
-
