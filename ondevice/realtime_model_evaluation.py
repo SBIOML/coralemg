@@ -148,7 +148,6 @@ def inference_process(queue, model_path, nb_sensors, filtering_utility, compress
             inference_start = time.perf_counter()
             vote = infer.make_inference(interpreter, scaled_data, False)
             inf_time = time.perf_counter()-inference_start
-            print("Inference time: %.1fms"%(inf_time*1000))
             votes_arr[curr_vote] = vote
 
             if (curr_vote+1 == nb_votes):
@@ -296,7 +295,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
 
 
 if __name__ == '__main__':
-    dataset = dtdef.CapgmyoDataset()
+    dataset = dtdef.EmagerDataset()
     subject = "01"
     model_name = "cnn"
     residual_bits = 8
@@ -309,21 +308,21 @@ if __name__ == '__main__':
     model_evaluation(dataset, model_name, subject, "2", "smart",  residual_bits, fine_tuned=False, on_device=False, debug=False)
     model_evaluation(dataset, model_name, subject, "2", "root",   residual_bits, fine_tuned=False, on_device=False, debug=False)
 
-    # model_evaluation(dataset, model_name, subject, "1", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
-    # model_evaluation(dataset, model_name, subject, "1", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
-    # model_evaluation(dataset, model_name, subject, "1", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
-    # model_evaluation(dataset, model_name, subject, "1", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
 
-    # model_evaluation(dataset, model_name, subject, "1", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
-    # model_evaluation(dataset, model_name, subject, "1", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
-    # model_evaluation(dataset, model_name, subject, "1", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
-    # model_evaluation(dataset, model_name, subject, "1", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
-    # model_evaluation(dataset, model_name, subject, "2", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "1", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
+    model_evaluation(dataset, model_name, subject, "2", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
 
