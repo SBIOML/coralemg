@@ -192,7 +192,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
     test_session = "2" if session == "1" else "1"
 
     # Create data
-    dataset_path = "/home/mendel/dataset/%s_%s_raw.npz"%(subject, test_session)
+    dataset_path = "/home/mendel/dataset/%s/%s_%s_raw.npz"%(dataset.name, subject, test_session)
 
     model_accuracy = []
     model_accuracy_maj = []
