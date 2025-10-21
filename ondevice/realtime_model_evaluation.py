@@ -189,7 +189,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
     filtering_utility= dataset.utility_filtered
     sampling_rate = (1/dataset.sampling_rate)
 
-    test_session = "002" if session == "001" else "001"
+    test_session = "2" if session == "1" else "1"
 
     # Create data
     dataset_path = "/home/mendel/dataset/%s_%s_raw.npz"%(subject, test_session)
