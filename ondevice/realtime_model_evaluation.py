@@ -144,7 +144,7 @@ def inference_process(queue, model_path, nb_sensors, filtering_utility, compress
             elif read_buffer == 2:
                 data = dp.process_buffer(buff3, fs=1000, Q=30, notch_freq=60, filtering_utility=filtering_utility)
 
-            scaled_data = dp.compress_data(data.reshape(1,nb_sensors), compression_method, residual_bits).reshape(width,height,1)
+            scaled_data = dp.compress_data(data.reshape(1,nb_sensors), compression_method, residual_bits).reshape(height, width,1)
             inference_start = time.perf_counter()
             vote = infer.make_inference(interpreter, scaled_data, False)
             inf_time = time.perf_counter()-inference_start
