@@ -296,7 +296,7 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
 
 
 if __name__ == '__main__':
-    dataset = "capgmyo"
+    dataset = dtdef.CapgmyoDataset()
     subject = "01"
     residual_bits = 8
     model_evaluation(dataset, subject, "1", "minmax", residual_bits, fine_tuned=False, on_device=False, debug=False)
