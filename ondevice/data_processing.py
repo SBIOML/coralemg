@@ -38,8 +38,11 @@ def extract_with_labels(data_array):
             ] = label
     return X, y
 
-def process_buffer(buffer, fs=1000, Q=30, notch_freq=60):
-    processed_data = filter_utility(buffer, fs=fs, Q=Q, notch_freq=notch_freq)
+def process_buffer(buffer, fs=1000, Q=30, notch_freq=60, filtering_utility=False):
+    if filtering_utility:
+        processed_data = filter_utility(buffer, fs=fs, Q=Q, notch_freq=notch_freq)
+    else:
+        processed_data = buffer
     return np.mean(np.absolute(processed_data - np.mean(processed_data,axis=0)),axis=0)
 
 def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60, filtering_utility=False):

@@ -267,6 +267,7 @@ def evaluate_repartition(dataset_path, subjects, sessions, compressed_methods, b
 
         if compression_method == "baseline":
             data_array = float(nb_bins-1) * data_array / 32767
+            nb_bins = 2**8
 
         plt.hist(
             data_array,
@@ -295,17 +296,17 @@ if __name__ == "__main__":
     sessions = ["1", "2"]
     #compression_methods = ["minmax", "msb", "smart", "root"]
 
-    result_path = "offdevice/ondevice_results"
-    #result_path = "offdevice/offdevice_results"
+    #result_path = "offdevice/ondevice_results"
+    result_path = "offdevice/offdevice_results"
     dataset = dtdef.EmagerDataset()
     #dataset = dtdef.CapgmyoDataset()
     model_name = "cnn"
 
     bits = [1,2,3,4,5,6,7,8]
-    for bit in bits :
-        evaluate_accuracy(
-            dataset, result_path, model_name, subjects, sessions, "msb", bit, fine_tuned=False, ondevice=False
-        )
+    #for bit in bits :
+    #    evaluate_accuracy(
+    #        dataset, result_path, model_name, subjects, sessions, "baseline", bit, fine_tuned=True, ondevice=False
+    #    )
 
     # evaluate_time(
     #     dataset,
@@ -317,7 +318,7 @@ if __name__ == "__main__":
     #     ondevice=True,
     # )
 
-    #compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
-    #dataset_path = "dataset/train/emager/"
-    #sessions = ["1", "2"]
-    #evaluate_repartition(dataset_path, subjects, sessions, compression_methods, 6)
+    compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
+    dataset_path = "dataset/train/capgmyo/"
+    sessions = ["1", "2"]
+    evaluate_repartition(dataset_path, subjects, sessions, compression_methods, 6)

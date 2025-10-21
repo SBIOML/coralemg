@@ -157,8 +157,7 @@ if __name__ == '__main__':
     model_name = "cnn"
     subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
     sessions = ["1", "2"]
-    #compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
-    compression_methods = ["minmax", "msb", "smart", "root"]
+    compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
     bits = [1,2,3,4,5,6,7,8]
 
     model_path = "offdevice/model"
@@ -177,8 +176,7 @@ if __name__ == '__main__':
     model_name = "cnn"
     subjects = ["01","02","03","04","05","06","07","08","09","10"]
     sessions = ["1", "2"]
-    #compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
-    compression_methods = ["minmax", "msb", "smart", "root"]
+    compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
     bits = [1,2,3,4,5,6,7,8]
 
     model_path = "offdevice/model"

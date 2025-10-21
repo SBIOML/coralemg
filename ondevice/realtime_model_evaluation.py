@@ -5,6 +5,7 @@ from multiprocessing import shared_memory
 import threading
 import socket
 import data_processing as dp
+import dataset_definition as dtdef
 from micropython import const
 import tpu_inference as infer
 import sklearn.metrics as metrics
@@ -24,12 +25,12 @@ def create_sampled_data(raw_dataset_path, data_range):
     y = np.array(y, dtype=np.uint8)
     return X, y
 
-def create_shared_memory(time_length):
+def create_shared_memory(time_length, nb_sensors):
     done_tmp = np.array([False], dtype=bool)
     mutex_tmp = np.array([0, 0, 0], dtype=np.int8)
-    data_buffer_1_tmp = np.zeros((time_length, 64), dtype=np.float32)
-    data_buffer_2_tmp = np.zeros((time_length, 64), dtype=np.float32)
-    data_buffer_3_tmp = np.zeros((time_length, 64), dtype=np.float32)
+    data_buffer_1_tmp = np.zeros((time_length, nb_sensors), dtype=np.float32)
+    data_buffer_2_tmp = np.zeros((time_length, nb_sensors), dtype=np.float32)
+    data_buffer_3_tmp = np.zeros((time_length, nb_sensors), dtype=np.float32)
     # Now create a NumPy array backed by shared memory
     done_shm = shared_memory.SharedMemory(create=True, size=done_tmp.nbytes)
     mutex_shm = shared_memory.SharedMemory(create=True, size=mutex_tmp.nbytes)
@@ -39,7 +40,7 @@ def create_shared_memory(time_length):
 
     return done_shm, mutex_shm, buff_1_shm, buff_2_shm, buff_3_shm
 
-def sample_data(data, samplin_rate, window_length, done_shr_name, mutex_shr_name, buff_1_shr_name, buff_2_shr_name, buff_3_shr_name, debug=False):
+def sample_data(data, nb_sensors, samplin_rate, window_length, done_shr_name, mutex_shr_name, buff_1_shr_name, buff_2_shr_name, buff_3_shr_name, debug=False):
     name = mp.current_process().name
 
     existing_done_shm = shared_memory.SharedMemory(name=done_shr_name)
@@ -50,9 +51,9 @@ def sample_data(data, samplin_rate, window_length, done_shr_name, mutex_shr_name
 
     done = np.ndarray((1), dtype=bool, buffer=existing_done_shm.buf)
     mutex = np.ndarray((3), dtype=np.int8, buffer=existing_mutex_shm.buf)
-    buff1 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff1_shm.buf)
-    buff2 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff2_shm.buf)
-    buff3 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff3_shm.buf)
+    buff1 = np.ndarray(((window_length, nb_sensors)), dtype=np.float32, buffer=existing_buff1_shm.buf)
+    buff2 = np.ndarray(((window_length, nb_sensors)), dtype=np.float32, buffer=existing_buff2_shm.buf)
+    buff3 = np.ndarray(((window_length, nb_sensors)), dtype=np.float32, buffer=existing_buff3_shm.buf)
     if debug:
         print("%s, Starting"%(name))
     sampling_index = 0
@@ -87,7 +88,7 @@ def sample_data(data, samplin_rate, window_length, done_shr_name, mutex_shr_name
     
     done[0] = True
 
-def inference_process(queue, model_path, compression_method, residual_bits, vote_length, window_length, done_shr_name, mutex_shr_name, buff_1_shr_name, buff_2_shr_name, buff_3_shr_name, debug=False):
+def inference_process(queue, model_path, nb_sensors, filtering_utility, compression_method, residual_bits, vote_length, window_length, done_shr_name, mutex_shr_name, buff_1_shr_name, buff_2_shr_name, buff_3_shr_name, debug=False):
     # Create shared memory
     existing_done_shm = shared_memory.SharedMemory(name=done_shr_name)
     existing_mutex_shm = shared_memory.SharedMemory(name=mutex_shr_name)
@@ -97,9 +98,9 @@ def inference_process(queue, model_path, compression_method, residual_bits, vote
 
     done = np.ndarray((1), dtype=bool, buffer=existing_done_shm.buf)
     mutex = np.ndarray((3), dtype=np.int8, buffer=existing_mutex_shm.buf)
-    buff1 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff1_shm.buf)
-    buff2 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff2_shm.buf)
-    buff3 = np.ndarray(((window_length, 64)), dtype=np.float32, buffer=existing_buff3_shm.buf)
+    buff1 = np.ndarray(((window_length, nb_sensors)), dtype=np.float32, buffer=existing_buff1_shm.buf)
+    buff2 = np.ndarray(((window_length, nb_sensors)), dtype=np.float32, buffer=existing_buff2_shm.buf)
+    buff3 = np.ndarray(((window_length, nb_sensors)), dtype=np.float32, buffer=existing_buff3_shm.buf)
 
     y_pred = []
     y_pred_maj = []
@@ -117,7 +118,7 @@ def inference_process(queue, model_path, compression_method, residual_bits, vote
     #TODO check if correct
     width, height = common.input_size(interpreter)
     interpreter.allocate_tensors()
-    infer.make_inference(interpreter, np.random.rand(64).reshape(width,height,1))
+    infer.make_inference(interpreter, np.random.rand(nb_sensors).reshape(width,height,1))
 
     nb_votes = int(np.floor(vote_length/window_length))
     votes_arr = np.zeros(nb_votes, dtype=np.uint8)
@@ -137,13 +138,13 @@ def inference_process(queue, model_path, compression_method, residual_bits, vote
             lock.release()
             read_buffer = mutex[2]
             if read_buffer == 0:
-                data = dp.process_buffer(buff1, fs=1000, Q=30, notch_freq=60)
+                data = dp.process_buffer(buff1, fs=1000, Q=30, notch_freq=60, filtering_utility=filtering_utility)
             elif read_buffer == 1:
-                data = dp.process_buffer(buff2, fs=1000, Q=30, notch_freq=60)
+                data = dp.process_buffer(buff2, fs=1000, Q=30, notch_freq=60, filtering_utility=filtering_utility)
             elif read_buffer == 2:
-                data = dp.process_buffer(buff3, fs=1000, Q=30, notch_freq=60)
+                data = dp.process_buffer(buff3, fs=1000, Q=30, notch_freq=60, filtering_utility=filtering_utility)
 
-            scaled_data = dp.compress_data(data.reshape(1,64), compression_method, residual_bits).reshape(width,height,1)
+            scaled_data = dp.compress_data(data.reshape(1,nb_sensors), compression_method, residual_bits).reshape(width,height,1)
             inference_start = time.perf_counter()
             vote = infer.make_inference(interpreter, scaled_data, False)
             inf_time = time.perf_counter()-inference_start
@@ -183,7 +184,10 @@ def inference_process(queue, model_path, compression_method, residual_bits, vote
     queue.put(total_process_time)
 
 def model_evaluation(dataset, model_name, subject, session, compression_method, residual_bits, fine_tuned=False, on_device=False, debug=False):
-    model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset, model_name, subject, session, compression_method, residual_bits)
+    model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset.name, model_name, subject, session, compression_method, residual_bits)
+    nb_sensors = dataset.sensors_dim[0]*dataset.sensors_dim[1]
+    filtering_utility= dataset.utility_filtered
+    sampling_rate = (1/dataset.sampling_rate)
 
     test_session = "002" if session == "001" else "001"
 
@@ -222,9 +226,9 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
         y_true_maj = np.array([np.argmax(np.bincount(y_true[i:i+nb_votes])) for i in range(0, len(y_true), nb_votes)])
 
         # Create shared memory
-        done_shm, mutex_shm, buff_1_shm, buff_2_shm, buff_3_shm  = create_shared_memory(_TIME_LENGTH)
-        data_sampling = mp.Process(name="adc_sampling", target=sample_data, args=(X, 0.001,_TIME_LENGTH, done_shm.name, mutex_shm.name, buff_1_shm.name, buff_2_shm.name, buff_3_shm.name, debug))
-        inference = mp.Process(name="main_process", target=inference_process, args=(queue, model_path, compression_method, residual_bits, _VOTE_LENGTH, _TIME_LENGTH, done_shm.name, mutex_shm.name, buff_1_shm.name, buff_2_shm.name, buff_3_shm.name, debug))
+        done_shm, mutex_shm, buff_1_shm, buff_2_shm, buff_3_shm  = create_shared_memory(_TIME_LENGTH, nb_sensors)
+        data_sampling = mp.Process(name="adc_sampling", target=sample_data, args=(X, nb_sensors, sampling_rate,_TIME_LENGTH, done_shm.name, mutex_shm.name, buff_1_shm.name, buff_2_shm.name, buff_3_shm.name, debug))
+        inference = mp.Process(name="main_process", target=inference_process, args=(queue, model_path, nb_sensors, filtering_utility, compression_method, residual_bits, _VOTE_LENGTH, _TIME_LENGTH, done_shm.name, mutex_shm.name, buff_1_shm.name, buff_2_shm.name, buff_3_shm.name, debug))
         inference.start()
         time.sleep(10)
         data_sampling.start()
@@ -281,44 +285,44 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
 
     if fine_tuned:
         if on_device:
-            filename = "/home/mendel/results/%s_evaluation_ondevice.npz"%(model_name)
+            filename = "/home/mendel/results/%s_realtime_evaluation_ondevice.npz"%(model_name)
         else:
-            filename = "/home/mendel/results/%s_evaluation_finetuned.npz"%(model_name)
+            filename = "/home/mendel/results/%s_realtime_evaluation_finetuned.npz"%(model_name)
     else:
-        filename = "/home/mendel/results/%s_evaluation.npz"%(model_name)
+        filename = "/home/mendel/results/%s_realtime_evaluation.npz"%(model_name)
     np.savez(filename, accuracy=np.array(model_accuracy), accuracy_majority_vote=np.array(model_accuracy_maj), 
              confusion_matrix=np.array(confusion_list), confusion_matrix_maj=np.array(confusion_list_maj), 
              inference_time=np.array(model_inference_time), maj_vote_time=np.array(model_maj_vote_time), process_time=np.array(model_total_process_time))
 
 
 if __name__ == '__main__':
-    dataset = "emager"
-    subject = "001"
+    dataset = "capgmyo"
+    subject = "01"
     residual_bits = 8
-    model_evaluation(dataset, subject, "001", "minmax", residual_bits, fine_tuned=False, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "001", "msb",    residual_bits, fine_tuned=False, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "001", "smart",  residual_bits, fine_tuned=False, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "001", "root",   residual_bits, fine_tuned=False, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "minmax", residual_bits, fine_tuned=False, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "msb",    residual_bits, fine_tuned=False, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "smart",  residual_bits, fine_tuned=False, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "root",   residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "1", "minmax", residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "1", "msb",    residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "1", "smart",  residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "1", "root",   residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "2", "minmax", residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "2", "msb",    residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "2", "smart",  residual_bits, fine_tuned=False, on_device=False, debug=False)
+    model_evaluation(dataset, subject, "2", "root",   residual_bits, fine_tuned=False, on_device=False, debug=False)
 
-    model_evaluation(dataset, subject, "001", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "001", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "001", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "001", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
-    model_evaluation(dataset, subject, "002", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "1", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "1", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "1", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "1", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "2", "minmax", residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "2", "msb",    residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "2", "smart",  residual_bits, fine_tuned=True, on_device=False, debug=False)
+    # model_evaluation(dataset, subject, "2", "root",   residual_bits, fine_tuned=True, on_device=False, debug=False)
 
-    model_evaluation(dataset, subject, "001", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
-    model_evaluation(dataset, subject, "001", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
-    model_evaluation(dataset, subject, "001", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
-    model_evaluation(dataset, subject, "001", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
-    model_evaluation(dataset, subject, "002", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
-    model_evaluation(dataset, subject, "002", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
-    model_evaluation(dataset, subject, "002", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
-    model_evaluation(dataset, subject, "002", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "1", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "1", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "1", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "1", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "2", "minmax", residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "2", "msb",    residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "2", "smart",  residual_bits, fine_tuned=True, on_device=True, debug=False)
+    # model_evaluation(dataset, subject, "2", "root",   residual_bits, fine_tuned=True, on_device=True, debug=False)
 
