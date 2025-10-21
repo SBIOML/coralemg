@@ -104,11 +104,12 @@ def model_evaluation(dataset, model_name, subject, session, compression_method, 
         filename = "/home/mendel/results/%s_evaluation.npz"%(model_name)
     np.savez(filename, accuracy=np.array(model_accuracy), accuracy_majority_vote=np.array(model_accuracy_maj), 
              confusion_matrix=np.array(confusion_list), confusion_matrix_maj=np.array(confusion_list_maj))
-    
+
 if __name__ == '__main__':
     #dataset = dtdef.EmagerDataset()
     dataset = dtdef.CapgmyoDataset()
-    compression_methods = ["minmax","msb", "smart","root"]
+    #compression_methods = ["minmax","msb", "smart","root"]
+    compression_methods = ["msb", "smart","root"]
     subject = "10"
     model_name = "cnn"
     sessions = ["1","2"]
@@ -116,4 +117,4 @@ if __name__ == '__main__':
     for session in sessions:
         for compression_method in compression_methods:
             for residual_bit in residual_bits:
-                model_evaluation(dataset, model_name, subject, session, compression_method, residual_bit, fine_tuned=True, on_device=True, debug=True)
+                model_evaluation(dataset, model_name, subject, session, compression_method, residual_bit, fine_tuned=False, on_device=False, debug=True)
