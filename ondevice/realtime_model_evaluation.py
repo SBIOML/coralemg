@@ -118,7 +118,7 @@ def inference_process(queue, model_path, nb_sensors, filtering_utility, compress
     #TODO check if correct
     width, height = common.input_size(interpreter)
     interpreter.allocate_tensors()
-    infer.make_inference(interpreter, np.random.rand(nb_sensors).reshape(width,height,1))
+    infer.make_inference(interpreter, np.random.rand(nb_sensors).reshape(height,width,1))
 
     nb_votes = int(np.floor(vote_length/window_length))
     votes_arr = np.zeros(nb_votes, dtype=np.uint8)
