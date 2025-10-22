@@ -286,12 +286,63 @@ def evaluate_repartition(dataset_path, subjects, sessions, compressed_methods, b
     #plt.savefig("histogram_quant.png")
     plt.show()
 
+def evaluate_repartition_relative(dataset_path, subjects, sessions, compressed_methods, bit):
+    nb_bins = 2**bit
+
+    color_map = {
+        "baseline": "#1f77b4",     # blue
+        "minmax": "#ff7f0e",       # green orange
+        "msb": "#2ca02c",   # orange green
+        "smart": "#d62728",      # red
+        "root": "#9467bd",       # purple
+    }
+
+    for compression_method in compressed_methods:
+        data_list = []
+        for subject in subjects:
+            for session in sessions:
+                datapath = dataset_path + "%s/%s_%s_%s_%sbits.npz" % (
+                    compression_method,
+                    subject,
+                    session,
+                    compression_method,
+                    bit
+                )
+                with np.load(datapath) as data:
+                    curr_data = data["data"]
+                data_list.append(curr_data)
+        data_array = np.array(data_list)
+        data_array = data_array.flatten()
+
+        if compression_method == "baseline":
+            data_array = float(nb_bins-1) * data_array / 32767
+            nb_bins = 2**bit
+            
+        data_array_pct = 100 * data_array / (nb_bins - 1)
+
+        plt.hist(
+            data_array_pct,
+            bins=nb_bins,
+            range=(0, 100),
+            alpha=0.5,
+            rwidth=1.0,
+            weights=np.ones_like(data_array_pct)*100 / len(data_array_pct),
+            color=color_map.get(compression_method.lower(), "gray")
+        )
+        plt.ylim((0, 20))
+        plt.xlim((-0.1, 60))
+        plt.xlabel("Relative Amplitude [%]", fontsize=14)
+        plt.ylabel("Density [%]", fontsize=14)
+        plt.grid(alpha=0.3)
+    plt.legend(["Original","Min-Max", "Right Shift", "Smart-3", "Root-3"])
+    plt.savefig("histogram_quant_%sbits.png"%(bit))
+    plt.show()
 
 if __name__ == "__main__":
 
-    #subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
 
-    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    #subjects = ["01","02","03","04","05","06","07","08","09","10"]
 
     sessions = ["1", "2"]
     #compression_methods = ["minmax", "msb", "smart", "root"]
@@ -318,7 +369,7 @@ if __name__ == "__main__":
     #     ondevice=True,
     # )
 
-    compression_methods = ["baseline", "minmax", "msb", "smart", "root"]
+    compression_methods = ["minmax", "msb", "smart", "root"]
     dataset_path = "dataset/train/capgmyo/"
     sessions = ["1", "2"]
-    evaluate_repartition(dataset_path, subjects, sessions, compression_methods, 6)
+    evaluate_repartition_relative(dataset_path, subjects, sessions, compression_methods, 8)
