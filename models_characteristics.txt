@@ -1,0 +1,71 @@
+EMaGer
+Model: "sequential"
+_________________________________________________________________
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv2d (Conv2D)             (None, 4, 16, 64)         640       
+                                                                 
+ batch_normalization (BatchN  (None, 4, 16, 64)        256       
+ ormalization)                                                   
+                                                                 
+ conv2d_1 (Conv2D)           (None, 4, 16, 64)         36928     
+                                                                 
+ batch_normalization_1 (Batc  (None, 4, 16, 64)        256       
+ hNormalization)                                                 
+                                                                 
+ conv2d_2 (Conv2D)           (None, 4, 16, 64)         102464    
+                                                                 
+ batch_normalization_2 (Batc  (None, 4, 16, 64)        256       
+ hNormalization)                                                 
+                                                                 
+ flatten (Flatten)           (None, 4096)              0         
+                                                                 
+ dense (Dense)               (None, 256)               1048832   
+                                                                 
+ dropout (Dropout)           (None, 256)               0         
+                                                                 
+ dense_1 (Dense)             (None, 6)                 1542      
+                                                                 
+=================================================================
+Total params: 1,191,174
+Trainable params: 1,190,790
+Non-trainable params: 384
+_________________________________________________________________
+Number of trainable weights = 16
+Number of layers in the model:  10
+
+
+Capgmyo
+ Layer (type)                Output Shape              Param #   
+=================================================================
+ conv2d (Conv2D)             (None, 8, 16, 64)         640       
+                                                                 
+ batch_normalization (BatchN  (None, 8, 16, 64)        256       
+ ormalization)                                                   
+                                                                 
+ conv2d_1 (Conv2D)           (None, 8, 16, 64)         36928     
+                                                                 
+ batch_normalization_1 (Batc  (None, 8, 16, 64)        256       
+ hNormalization)                                                 
+                                                                 
+ conv2d_2 (Conv2D)           (None, 8, 16, 64)         102464    
+                                                                 
+ batch_normalization_2 (Batc  (None, 8, 16, 64)        256       
+ hNormalization)                                                 
+                                                                 
+ flatten (Flatten)           (None, 8192)              0         
+                                                                 
+ dense (Dense)               (None, 256)               2097408   
+                                                                 
+ dropout (Dropout)           (None, 256)               0         
+                                                                 
+ dense_1 (Dense)             (None, 8)                 2056      
+                                                                 
+=================================================================
+Total params: 2,240,264
+Trainable params: 2,239,880
+Non-trainable params: 384
+_________________________________________________________________
+Number of trainable weights = 16
+Number of layers in the model:  10
+
