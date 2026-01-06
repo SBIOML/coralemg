@@ -2,6 +2,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 import pandas as pd
 import dataset_definition as dtdef
+from sklearn.metrics import ConfusionMatrixDisplay
+from scipy import stats
 
 def histogram(data_df: pd.DataFrame, xlim=1200):
     """
@@ -66,10 +68,7 @@ def evaluate_accuracy(
     global_accuracy_maj = np.array([])
 
     dataset_name = dataset.name
-    nb_class = dataset.nb_class
 
-    cm = np.zeros((nb_class, nb_class))
-    cm_maj = np.zeros((nb_class, nb_class))
     for subject in subjects:
         for session in sessions:
             if fine_tuned:
@@ -108,11 +107,6 @@ def evaluate_accuracy(
             global_accuracy_maj = np.append(
                 global_accuracy_maj, data["accuracy_majority_vote"]
             )
-            conf_matrix = data["confusion_matrix"]
-            conf_matrix_maj = data["confusion_matrix_maj"]
-            for i in range(5):
-                cm += conf_matrix[i]
-                cm_maj += conf_matrix_maj[i]
 
     print("Dataset : %s" % (dataset_name))
     print("Compressed method: %s" % (compression_method))
@@ -132,14 +126,71 @@ def evaluate_accuracy(
     )
     print("\n")
 
-    # #display confusion matrix
-    # cm = 100*cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-    # ConfusionMatrixDisplay(cm).plot()
+    return global_accuracy, global_accuracy_maj
 
-    # cm_maj = 100*cm_maj.astype('float') / cm_maj.sum(axis=1)[:, np.newaxis]
-    # ConfusionMatrixDisplay(cm_maj).plot()
-    # plt.show()
+def display_confusion_matrix(
+    dataset,
+    result_path,
+    model_name,
+    subjects,
+    sessions,
+    compression_method,
+    bit,
+    fine_tuned=False,
+    ondevice=False,
+):
+    dataset_name = dataset.name
+    nb_class = dataset.nb_class
 
+    cm = np.zeros((nb_class, nb_class))
+    cm_maj = np.zeros((nb_class, nb_class))
+    for subject in subjects:
+        for session in sessions:
+            if fine_tuned:
+                datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation_finetuned.npz" % (
+                    result_path,
+                    dataset_name,
+                    model_name,
+                    subject,
+                    session,
+                    compression_method,
+                    bit,
+                )
+            elif ondevice:
+                datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation_ondevice.npz" % (
+                    result_path,
+                    dataset_name,
+                    model_name,
+                    subject,
+                    session,
+                    compression_method,
+                    bit,
+                )
+            else:
+                datapath = "%s/%s_%s_%s_%s_%s_%sbits_evaluation.npz" % (
+                    result_path,
+                    dataset_name,
+                    model_name,
+                    subject,
+                    session,
+                    compression_method,
+                    bit,
+                )
+
+            data = np.load(datapath)
+            conf_matrix = data["confusion_matrix"]
+            conf_matrix_maj = data["confusion_matrix_maj"]
+            for i in range(5):
+                cm += conf_matrix[i]
+                cm_maj += conf_matrix_maj[i]
+
+    #display confusion matrix
+    cm = 100*cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
+    ConfusionMatrixDisplay(cm).plot()
+
+    cm_maj = 100*cm_maj.astype('float') / cm_maj.sum(axis=1)[:, np.newaxis]
+    ConfusionMatrixDisplay(cm_maj).plot()
+    plt.show()
 
 def evaluate_time(
     dataset,
@@ -338,26 +389,49 @@ def evaluate_repartition_relative(dataset_path, subjects, sessions, compressed_m
     plt.savefig("histogram_quant_%sbits.png"%(bit))
     plt.show()
 
+def mean_hypothesis_test(dataset,
+    result_path,
+    model_name,
+    subjects,
+    sessions,
+    compression_method,
+    bit,
+    fine_tuned,
+    ondevice,
+):
+    baseline_accuracy_maj = np.array([])
+    _, quantized_accuracy_maj = evaluate_accuracy(dataset, result_path, model_name, subjects, sessions, compression_method, bit, fine_tuned, ondevice)
+    for i in range(8):
+        _, ba_acc_maj = evaluate_accuracy(dataset, result_path, model_name, subjects, sessions, "baseline", i+1, fine_tuned, ondevice)
+        baseline_accuracy_maj = np.append(baseline_accuracy_maj, ba_acc_maj)
+    
+    baseline_accuracy_maj = baseline_accuracy_maj.flatten()
+
+    u_stat, p_value = stats.mannwhitneyu(quantized_accuracy_maj, baseline_accuracy_maj, alternative="greater")
+    print("p-value:", p_value)
+
 if __name__ == "__main__":
 
-    subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
+    #subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
 
-    #subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    subjects = ["01","02","03","04","05","06","07","08","09","10"]
 
     sessions = ["1", "2"]
     #compression_methods = ["minmax", "msb", "smart", "root"]
 
     #result_path = "offdevice/ondevice_results"
     result_path = "offdevice/offdevice_results"
-    dataset = dtdef.EmagerDataset()
-    #dataset = dtdef.CapgmyoDataset()
+    #dataset = dtdef.EmagerDataset()
+    dataset = dtdef.CapgmyoDataset()
     model_name = "cnn"
 
     bits = [1,2,3,4,5,6,7,8]
-    #for bit in bits :
-    #    evaluate_accuracy(
-    #        dataset, result_path, model_name, subjects, sessions, "baseline", bit, fine_tuned=True, ondevice=False
-    #    )
+    for bit in bits :
+        evaluate_accuracy(
+            dataset, result_path, model_name, subjects, sessions, "smart", bit, fine_tuned=False, ondevice=False
+        )
+    
+    mean_hypothesis_test(dataset, result_path, model_name, subjects, sessions, "minmax", 6, fine_tuned=True, ondevice=False)
 
     # evaluate_time(
     #     dataset,
@@ -369,7 +443,7 @@ if __name__ == "__main__":
     #     ondevice=True,
     # )
 
-    compression_methods = ["minmax", "msb", "smart", "root"]
-    dataset_path = "dataset/train/capgmyo/"
-    sessions = ["1", "2"]
-    evaluate_repartition_relative(dataset_path, subjects, sessions, compression_methods, 8)
+    #compression_methods = ["minmax", "msb", "smart", "root"]
+    #dataset_path = "dataset/train/capgmyo/"
+    #sessions = ["1", "2"]
+    #evaluate_repartition_relative(dataset_path, subjects, sessions, compression_methods, 8)
