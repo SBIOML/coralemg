@@ -8,7 +8,6 @@ def filter_utility(data, fs=1000, Q=30, notch_freq=60):
     b_notch, a_notch = signal.iirnotch(notch_freq, Q, fs)
     return signal.filtfilt(b_notch, a_notch, data, axis=0)
 
-
 def extract_with_labels(data_array):
     """
     Given a data array, it will extract the data and labels from the array.
@@ -36,7 +35,7 @@ def extract_with_labels(data_array):
     return X, y
 
 
-def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60):
+def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60, filtering_utility=False):
     """
     Given a data array, it will preprocess the data by applying the desired operations.
 
@@ -59,9 +58,10 @@ def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60):
                 start = curr_window * window_length
                 end = (curr_window + 1) * window_length
                 processed_data = data_array[label, experiment, start:end, :]
-                processed_data = filter_utility(
-                    processed_data, fs=fs, Q=Q, notch_freq=notch_freq
-                )
+                if filtering_utility:
+                    processed_data = filter_utility(
+                        processed_data, fs=fs, Q=Q, notch_freq=notch_freq
+                    )
                 processed_data = np.mean(
                     np.absolute(processed_data - np.mean(processed_data, axis=0)),
                     axis=0,
@@ -103,35 +103,42 @@ def _roll_array(
     return tmp_data
 
 
-def compress_data(data, method="minmax"):
+def compress_data(data, method="minmax", residual_bits=8):
     """
     Given a data array, it will compress the data by the specified method.
 
-    @param data the data array to be compressed
+    @param data the data array to be compressed. The data is assumed to be int16
     @param method the method to use for compression, can be "minmax", "msb", or "smart"
+    @param residual_bits the number of bits to compress to
 
     @return the compressed data array
     """
     if method == "minmax":
-        return compress.normalize_min_max_c(data).astype(np.uint8)
+        return compress.normalize_min_max_c(data, residual_bits).astype(np.uint8)
     elif method == "msb":
-        return compress.naive_bitshift_c(data, 8).astype(np.uint8)
+        return compress.naive_bitshift_c(data, residual_bits).astype(np.uint8)
     elif method == "smart":
-        return compress.smart_bitshift_c(data, 8, 3).astype(np.uint8)
+        msb_shift = (8-residual_bits)+3
+        return compress.smart_bitshift_c(data, residual_bits, msb_shift).astype(np.uint8)
     elif method == "log":
-        return compress.log_c(data, 20000).astype(np.uint8)
+        return compress.log_c(data, 20000, residual_bits).astype(np.uint8)
     elif method == "root":
-        return compress.nroot_c(data, 3.0, 20000).astype(np.uint8)
+        return compress.nroot_c(data, 3.0, 20000, residual_bits).astype(np.uint8)
     elif method == "baseline":
         return data
     else:
         raise ValueError("Invalid compression method")
 
+def convert_capgmyo_16bit(experiment_array):
+    return np.floor(experiment_array*32767).astype(np.int16)
+
+def convert_hyser_16bit(experiment_array):
+    pass
 
 if __name__ == "__main__":
     # generate sinus of 60 hz
     dataset_path = "dataset/emager/"
-    data_array = sd.getData_EMG(dataset_path, "000", "002", differential=False)
+    data_array = sd.load_emager(dataset_path, "000", "002", differential=False)
     print(data_array.shape)
     # preprocess the data
     averages = preprocess_data(data_array)
@@ -168,7 +175,7 @@ if __name__ == "__main__":
 
     """
     example usage (sd.save_training_data)
-    data_array = getData_EMG(dataset_path, subject, session, differential=False)
+    data_array = load_emager(dataset_path, subject, session, differential=False)
     averages_data = dp.preprocess_data(data_array)
     compressed_data = dp.compress_data(averages_data, method=compressed_method)
     rolled_data = dp.roll_data(compressed_data, 2)

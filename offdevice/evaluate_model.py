@@ -3,19 +3,20 @@ import numpy as np
 import tensorflow as tf
 import data_processing as dp
 import sklearn.metrics as metrics
+import dataset_definition as dtdef
 
 
-def create_processed_data(raw_dataset_path, data_range, time_length=25):
+def create_processed_data(dataset, raw_dataset_path, data_range, time_length=25):
     with np.load(raw_dataset_path) as data:
         raw_data = data['data']
 
     raw_data = raw_data[:,data_range,:,:]
-    raw_data = dp.preprocess_data(raw_data, window_length=time_length)
+    raw_data = dp.preprocess_data(raw_data, window_length=time_length, filtering_utility=not dataset.utility_filtered)
     X, y = dp.extract_with_labels(raw_data)
     y = np.array(y, dtype=np.uint8)
     return X, y
 
-def evaluate_raw_model(model_path,dataset_path,model_name):
+def evaluate_raw_model(dataset, model_path, dataset_path, model_name):
     BATCH_SIZE = 64
 
     model_path = '%s/%s.h5'%(model_path, model_name)
@@ -24,10 +25,10 @@ def evaluate_raw_model(model_path,dataset_path,model_name):
     with np.load(dataset_path) as data:
         test_examples = data['data']
         test_labels = data['label']
-
-    data_dim = np.shape(test_examples)
     
-    test_examples = test_examples.astype('float32').reshape(-1,4,16,1)
+    line_dim = dataset.sensors_dim[0]
+    column_dim = dataset.sensors_dim[1]
+    test_examples = test_examples.astype('float32').reshape(-1,line_dim,column_dim,1)
 
     test_dataset = tf.data.Dataset.from_tensor_slices(test_examples)
     test_dataset = test_dataset.batch(BATCH_SIZE)
@@ -42,12 +43,14 @@ def evaluate_raw_model(model_path,dataset_path,model_name):
 
     print("Raw model accuracy: {:.3%}".format(keras_accuracy.result()))
 
-def evaluate_tflite_model(model_path, dataset_path, tflite_model_name):
+def evaluate_tflite_model(dataset, model_path, dataset_path, tflite_model_name):
     with np.load(dataset_path) as data:
         test_examples = data['data']
         test_labels = data['label']
 
-    test_examples = test_examples.astype(np.uint8).reshape(-1,4,16,1)
+    line_dim = dataset.sensors_dim[0]
+    column_dim = dataset.sensors_dim[1]
+    test_examples = test_examples.astype(np.uint8).reshape(-1,line_dim,column_dim,1)
     data = test_examples[:,:,:,:]
     
     model_path = '%s/%s.tflite'%(model_path, tflite_model_name)
@@ -69,13 +72,15 @@ def evaluate_tflite_model(model_path, dataset_path, tflite_model_name):
     tflite_accuracy(prediction, test_labels)
     print("Quant TF Lite accuracy: {:.3%}".format(tflite_accuracy.result()))
 
-def test_model_performance(model_path, raw_dataset_path, result_path, subject, session, compression_method, fine_tuned=False, time_length=25, vote_length=150):
+def test_model_performance(dataset, model_path, raw_dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150):
     BATCH_SIZE = 64
     if not os.path.exists(result_path):
         os.makedirs(result_path)
 
-    model_name = "emager_%s_%s_%s"%(subject, session, compression_method)
-    test_session = "002" if session == "001" else "001"    
+    dataset_name = dataset.name
+
+    model_name = "%s_%s_%s_%s_%s_%sbits"%(dataset_name, model_name, subject, session, compression_method, bit)
+    test_session = "2" if session == "1" else "1"    
 
     # Create data
     dataset_path = '%s/%s_%s_raw.npz'%(raw_dataset_path, subject, test_session)
@@ -94,9 +99,12 @@ def test_model_performance(model_path, raw_dataset_path, result_path, subject, s
             running_model_name = model_name
             current_model_path = '%s/%s.h5'%(model_path, running_model_name)
         testing_range = list(set(range(10)) - set(fine_tuning_range))
-        X_test, y_test = create_processed_data(dataset_path, testing_range)
-        X_test = dp.compress_data(X_test, method=compression_method) 
-        X_test = X_test.astype('float32').reshape(-1,4,16,1)
+        X_test, y_test = create_processed_data(dataset, dataset_path, testing_range)
+        X_test = dp.compress_data(X_test, method=compression_method, residual_bits=bit) 
+
+        line_dim = dataset.sensors_dim[0]
+        column_dim = dataset.sensors_dim[1]
+        X_test = X_test.astype('float32').reshape(-1,line_dim,column_dim,1)
         nb_votes = int(np.floor(vote_length/time_length))
 
         y_true = y_test
@@ -135,21 +143,49 @@ def test_model_performance(model_path, raw_dataset_path, result_path, subject, s
 if __name__ == '__main__':
     # folder_path = "offdevice/model/"
     # tflite_path = "offdevice/model/tflite/normal/"
-    # model_name = "emager_001_002_root"
-    # model_name_tflite = "emager_010_002_root"
-    # dataset_path = "dataset/train/root/010_001_root.npz"
+    # model_name = "emager_cnn_01_1_smart_5bits"
+    # model_name_tflite = "emager_cnn_01_1_smart_5bits"
+    # dataset_path = "dataset/train/emager/smart/01_1_smart_5bits.npz"
 
-    # evaluate_raw_model(folder_path, dataset_path, model_name)
-    # evaluate_tflite_model(tflite_path, dataset_path, model_name_tflite)
+    # dataset = dtdef.EmagerDataset()
 
-    subjects = ["000","001","002"]
-    sessions = ["001", "002"]
+    # evaluate_raw_model(dataset, folder_path, dataset_path, model_name)
+    # evaluate_tflite_model(dataset, tflite_path, dataset_path, model_name_tflite)
+
+    dataset = dtdef.EmagerDataset()
+    dataset_name = dataset.name
+    model_name = "cnn"
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
+    sessions = ["1", "2"]
     compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    bits = [1,2,3,4,5,6,7,8]
 
     model_path = "offdevice/model"
-    dataset_path = "dataset/raw/"
+    dataset_path = "dataset/raw/%s"%(dataset_name)
     result_path = "offdevice/offdevice_results"
     for subject in subjects:
         for session in sessions:
             for compression_method in compression_methods:
-                test_model_performance(model_path, dataset_path, result_path, subject, session, compression_method, fine_tuned=False, time_length=25, vote_length=150)
+                for bit in bits:
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=True, time_length=25, vote_length=150)
+
+
+    dataset = dtdef.CapgmyoDataset()
+    dataset_name = dataset.name
+    model_name = "cnn"
+    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    sessions = ["1", "2"]
+    compression_methods = ["minmax", "msb", "smart", "root", "baseline"]
+    bits = [1,2,3,4,5,6,7,8]
+
+    model_path = "offdevice/model"
+    dataset_path = "dataset/raw/%s"%(dataset_name)
+    result_path = "offdevice/offdevice_results"
+    for subject in subjects:
+        for session in sessions:
+            for compression_method in compression_methods:
+                for bit in bits:
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=False, time_length=25, vote_length=150)
+                    test_model_performance(dataset, model_path, dataset_path, result_path, model_name, subject, session, compression_method, bit, fine_tuned=True, time_length=25, vote_length=150)
+

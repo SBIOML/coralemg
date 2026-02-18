@@ -5,44 +5,12 @@ import sys
 import time
 import numpy as np
 import data_processing as dp
+import dataset_definition as dtdef
 
 from pycoral.adapters import classify
 from pycoral.adapters import common
 from pycoral.learn.backprop.softmax_regression import SoftmaxRegression
 import tpu_inference as infer
-
-def preprocess_data(data_array, window_length=25, fs=1000, Q=30, notch_freq=60):
-    """
-    Given a data array, it will preprocess the data by applying the desired operations.
-
-    @param data: the data array to be processed, the data array has the format (nb_gesture, nb_repetition, time_length, num_channels)
-    @param window_length the length of the time window to use
-    @param fs the sampling frequency of the data
-    @param Q the quality factor of the notch filter
-    @param notch_freq the frequency of the notch filter
-
-    @return the processed data array
-    """
-    labels, nb_exp, total_time_length, nb_channels = np.shape(data_array)
-
-    nb_window = int(np.floor(total_time_length / window_length))
-    output_data = np.zeros((labels, nb_exp, nb_window, nb_channels))
-
-    for label in range(labels):
-        for experiment in range(nb_exp):
-            for curr_window in range(nb_window):
-                start = curr_window * window_length
-                end = (curr_window + 1) * window_length
-                processed_data = data_array[label, experiment, start:end, :]
-                processed_data = dp.filter_utility(
-                    processed_data, fs=fs, Q=Q, notch_freq=notch_freq
-                )
-                processed_data = np.mean(
-                    np.absolute(processed_data - np.mean(processed_data, axis=0)),
-                    axis=0,
-                )
-                output_data[label, experiment, curr_window, :] = processed_data
-    return output_data
 
 def extract_embeddings(data_array, interpreter):
     """
@@ -55,11 +23,12 @@ def extract_embeddings(data_array, interpreter):
     """
     nb_data = np.shape(data_array)[0]
 
-    input_size = common.input_size(interpreter)
+    #TODO check if correct
+    width, height = common.input_size(interpreter)
     feature_dim = classify.num_classes(interpreter)
     embeddings = np.empty((nb_data, feature_dim), dtype=np.float32)
     for idx, data in enumerate(data_array):
-      infer.set_input(interpreter, data.reshape(4,16,1))
+      infer.set_input(interpreter, data.reshape(height,width,1))
       interpreter.invoke()
       embeddings[idx, :] = classify.get_scores(interpreter)
     return embeddings
@@ -110,33 +79,40 @@ def train_model(extractor_path, X_train, y_train, add_to_model_name=""):
         f.write(model.serialize_model(extractor_path))
     print('Model %s saved.' % out_model_path)
 
-def fine_tune_model(subject, session, compression_method):
-    model_name = "emager_%s_%s_%s_ondevice_edgetpu"%(subject, session, compression_method)
+def fine_tune_model(dataset, model_type, subject, session, compression_method, residual_bits):
+    #TODO model_type
+    model_name = "%s_%s_%s_%s_%s_%sbits_ondevice_edgetpu"%(dataset.name, model_type, subject, session, compression_method, residual_bits)
 
-    test_session = "002" if session == "001" else "001"
+    test_session = "2" if session == "1" else "1"
 
     # Create data
-    dataset_path = "/home/mendel/dataset/%s_%s_raw.npz"%(subject, test_session)
+    dataset_path = "/home/mendel/dataset/%s/%s_%s_raw.npz"%(dataset.name, subject, test_session)
     model_path = "/home/mendel/model/%s.tflite"%(model_name)
 
     with np.load(dataset_path) as data:
         raw_data = data['data']
-    processed_data = preprocess_data(raw_data)
+    processed_data = dp.preprocess_data(raw_data, filtering_utility=not dataset.utility_filtered)
 
     for i in range(5):
         fine_tuning_range = range(i*2, i*2+2)
         fine_tune_data = processed_data[:,fine_tuning_range,:,:]
         X, y = dp.extract_with_labels(fine_tune_data)
-        X = dp.compress_data(X, method=compression_method)
+        X = dp.compress_data(X, compression_method, residual_bits)
         y = np.array(y, dtype=np.uint8)
         add_to_model_name = "_tuned_%s_%s"%(fine_tuning_range[0], fine_tuning_range[-1])
         train_model(model_path, X, y, add_to_model_name)
 
 
 if __name__ == "__main__":
-    subject = "012"
-    sessions = ["001","002"]
-    compressed_methods = ["minmax", "msb", "smart", "root"]
+    dataset = dtdef.CapgmyoDataset()
+    model_type = "cnn"
+    subject = "04"
+    sessions = ["1","2"]
+    #compressed_methods = ["minmax", "msb", "smart", "root"]
+    #residual_bits = [1,2,3,4,5,6,7,8]
+    compressed_methods = ["minmax"]
+    residual_bits = [8]
     for compression in compressed_methods:
         for session in sessions:
-            fine_tune_model(subject, session, compression)
+            for bits in residual_bits:
+                fine_tune_model(dataset, model_type, subject, session, compression, bits)
