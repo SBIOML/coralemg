@@ -4,6 +4,7 @@ import pandas as pd
 import dataset_definition as dtdef
 from sklearn.metrics import ConfusionMatrixDisplay
 from scipy import stats
+import seaborn as sns 
 
 def histogram(data_df: pd.DataFrame, xlim=1200):
     """
@@ -410,28 +411,129 @@ def mean_hypothesis_test(dataset,
     u_stat, p_value = stats.mannwhitneyu(quantized_accuracy_maj, baseline_accuracy_maj, alternative="greater")
     print("p-value:", p_value)
 
+def draw_box_plot(dataset, 
+    project_path, 
+    model_name, 
+    subjects,
+    bit,
+):
+    medianprops = dict(linestyle='-', linewidth=2, color='black')
+    meanpointprops = dict(marker='o', markeredgecolor='black',
+                        markerfacecolor='darkblue')
+    boxprops=dict(linewidth=2, alpha=0.9)
+    whiskerprops=dict(linewidth=2, linestyle=':')
+    capprops=dict(linewidth=2)
+    fontsize=15
+
+    #Create a dataframe with subject, model, roll, accuracy
+    dataframe = pd.DataFrame(columns=['subject', 'session', 'compression', 'fine-tuning', 'vote', 'accuracy'])
+
+    compressions = ["root", "smart", "minmax", "msb", "baseline"]
+    fine_tunings = ["ondevice", "finetuned", ""]
+
+    for compression in compressions:
+        for fine_tuning in fine_tunings:
+            dataframe = _generate_results_list(dataframe, dataset, project_path, model_name, subjects, compression, bit, fine_tuning)
+
+    #Keep only the vote results
+    dataframe_novote = dataframe[dataframe['vote'] == "no_vote"]
+    dataframe_vote = dataframe[dataframe['vote'] == "vote"]
+
+    # Draw box plot
+    fig = plt.figure(figsize=(14,8))
+    sns.boxplot(data=dataframe_vote, x="fine-tuning", y="accuracy", hue="compression", gap=0.2,
+                medianprops=medianprops, 
+                meanprops=meanpointprops, 
+                palette=["paleturquoise","navajowhite","#c1b7ff", "lightsalmon", "mediumseagreen"],
+                showmeans=True,
+                boxprops=boxprops, 
+                whiskerprops=whiskerprops, 
+                capprops=capprops,
+                linecolor='black',
+                width=0.65)
+    #plt.title("Jeu de données : %s - Vote de majorité : 25 ms" % (dataset_name), fontsize=17)
+    plt.tick_params(axis='both', which='major', labelsize=19)
+    plt.legend(title='Quantization: %s-bit'%(bit), fontsize=16, title_fontsize=16, loc='lower right')
+    plt.xlabel("")
+    plt.ylabel("Accuracy (%)", fontsize=19)
+    plt.yticks([10*i for i in range(11)])
+    plt.grid(axis='y')
+    plt.ylim(0, 105)
+    fig.tight_layout()
+    fig.savefig('result_tpu_quant_%sbits_%s.png'%(bit, dataset.name), transparent=True)
+    plt.show()
+
+def _generate_results_list(dataframe, dataset, project_path, model_name, subjects, compression_method, bit, tuning=""):
+    sessions = ["1", "2"]
+    dataset_name = dataset.name
+    nb_no_votes = 1
+    nb_votes = 6 
+
+    compression_dict = {"baseline":"Baseline", "root":"Root", "smart":"Smart", "minmax":"Min-Max", "msb":"Right"}
+
+    tuning_load = "" if len(tuning) == 0 else "_%s"%(tuning)
+    
+    if tuning == "":
+        tuning_name = "No tuning"
+    elif tuning == "finetuned":
+        tuning_name = "Off-Device"
+    elif tuning == "ondevice":
+        tuning_name = "On-Device"
+
+    for subject in subjects:
+        for session in sessions:
+            ok = True
+            if compression_method == "baseline":
+                if tuning != "ondevice":
+                    datapath = "%s/offdevice_results/%s_%s_%s_%s_%s_%sbits_evaluation%s.npz"%(project_path, dataset_name, model_name, subject, session, compression_method, bit, tuning_load)
+                else:
+                    ok = False
+            else:
+                datapath = "%s/ondevice_results/%s_%s_%s_%s_%s_%sbits_evaluation%s.npz"%(project_path, dataset_name, model_name, subject, session, compression_method, bit, tuning_load)
+            
+            if ok:
+                data = np.load(datapath)
+
+                no_vote = 100*np.mean(data["accuracy"])
+                vote = 100*np.mean(data["accuracy_majority_vote"])
+
+
+
+                vote_name = "no_vote"
+                liste = [subject, session, compression_dict[compression_method], tuning_name, vote_name, no_vote]
+                dataframe = pd.concat([pd.DataFrame([liste], columns=dataframe.columns), dataframe], ignore_index=True)
+
+                vote_name = "vote"
+                liste = [subject, session, compression_dict[compression_method], tuning_name, vote_name, vote]
+                dataframe = pd.concat([pd.DataFrame([liste], columns=dataframe.columns), dataframe], ignore_index=True)
+
+    return dataframe
+
 if __name__ == "__main__":
 
-    #subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
+    subjects = ["00","01","02","03","04","05","06","07","08","09","10","11"]
 
-    subjects = ["01","02","03","04","05","06","07","08","09","10"]
+    #subjects = ["01","02","03","04","05","06","07","08","09","10"]
 
     sessions = ["1", "2"]
     #compression_methods = ["minmax", "msb", "smart", "root"]
 
-    #result_path = "offdevice/ondevice_results"
-    result_path = "offdevice/offdevice_results"
-    #dataset = dtdef.EmagerDataset()
-    dataset = dtdef.CapgmyoDataset()
+    project_path = "offdevice"
+    result_path = "offdevice/ondevice_results"
+    #result_path = "offdevice/offdevice_results"
+    dataset = dtdef.EmagerDataset()
+    #dataset = dtdef.CapgmyoDataset()
     model_name = "cnn"
 
-    bits = [1,2,3,4,5,6,7,8]
-    for bit in bits :
-        evaluate_accuracy(
-            dataset, result_path, model_name, subjects, sessions, "smart", bit, fine_tuned=False, ondevice=False
-        )
+    # bits = [1,2,3,4,5,6,7,8]
+    # for bit in bits :
+    #     evaluate_accuracy(
+    #         dataset, result_path, model_name, subjects, sessions, "smart", bit, fine_tuned=False, ondevice=False
+    #     )
     
-    mean_hypothesis_test(dataset, result_path, model_name, subjects, sessions, "minmax", 6, fine_tuned=True, ondevice=False)
+    # mean_hypothesis_test(dataset, result_path, model_name, subjects, sessions, "minmax", 6, fine_tuned=True, ondevice=False)
+    for i in range(8):
+        draw_box_plot(dataset, project_path, model_name, subjects, str(i+1))
 
     # evaluate_time(
     #     dataset,
