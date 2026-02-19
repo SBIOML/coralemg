@@ -4,7 +4,6 @@ dataset
 lib64
 lib
 model
-offdevice_results
 share
 cuda*
 pyvenv.cfg
