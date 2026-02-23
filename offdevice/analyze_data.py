@@ -482,22 +482,34 @@ def _generate_results_list(dataframe, dataset, project_path, model_name, subject
 
     for subject in subjects:
         for session in sessions:
-            ok = True
             if compression_method == "baseline":
-                if tuning != "ondevice":
-                    datapath = "%s/offdevice_results/%s_%s_%s_%s_%s_%sbits_evaluation%s.npz"%(project_path, dataset_name, model_name, subject, session, compression_method, bit, tuning_load)
-                else:
-                    ok = False
+                for index in range(8):
+                    ok = True
+                    curr_bit = index+1
+                    if tuning != "ondevice":
+                        datapath = "%s/offdevice_results/%s_%s_%s_%s_%s_%sbits_evaluation%s.npz"%(project_path, dataset_name, model_name, subject, session, compression_method, curr_bit, tuning_load)
+                    else:
+                        ok = False
+                    if ok:
+                        data = np.load(datapath)
+
+                        no_vote = 100*np.mean(data["accuracy"])
+                        vote = 100*np.mean(data["accuracy_majority_vote"])
+
+                        vote_name = "no_vote"
+                        liste = [subject, session, compression_dict[compression_method], tuning_name, vote_name, no_vote]
+                        dataframe = pd.concat([pd.DataFrame([liste], columns=dataframe.columns), dataframe], ignore_index=True)
+
+                        vote_name = "vote"
+                        liste = [subject, session, compression_dict[compression_method], tuning_name, vote_name, vote]
+                        dataframe = pd.concat([pd.DataFrame([liste], columns=dataframe.columns), dataframe], ignore_index=True)
+
             else:
                 datapath = "%s/ondevice_results/%s_%s_%s_%s_%s_%sbits_evaluation%s.npz"%(project_path, dataset_name, model_name, subject, session, compression_method, bit, tuning_load)
-            
-            if ok:
                 data = np.load(datapath)
 
                 no_vote = 100*np.mean(data["accuracy"])
                 vote = 100*np.mean(data["accuracy_majority_vote"])
-
-
 
                 vote_name = "no_vote"
                 liste = [subject, session, compression_dict[compression_method], tuning_name, vote_name, no_vote]
